@@ -78,7 +78,7 @@ export default function LandingPage() {
                 <h2 className="text-3xl font-bold mb-6 text-center text-primary">Trending Now</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
                     {trendingFilms.map(film => (
-                        <FilmCard key={film.id} title={film.title} poster={film.poster} />
+                        <FilmCard key={film.id} title={film.title} poster={film.poster} id={""} year={0} genre={""} rating={0} price={""} />
                     ))}
                 </div>
             </section>
