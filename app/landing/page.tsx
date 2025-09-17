@@ -33,6 +33,7 @@ export default function LandingPage() {
                     <WalletsModal
                         open={dialogOpen}
                         onOpenChange={setDialogOpen}
+                        redirectTo="/films"
                         trigger={
                             <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-3 shadow-lg" onClick={() => setDialogOpen(true)}>
                                 Get Started
