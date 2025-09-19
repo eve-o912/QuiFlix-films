@@ -4,14 +4,6 @@ import Film from './Film';
 import Purchase from './Purchase';
 import View from './View';
 
-// Initialize all models
-const models = {
-  User,
-  Film,
-  Purchase,
-  View
-};
-
 // Sync database
 const syncDatabase = async () => {
   try {
@@ -23,5 +15,4 @@ const syncDatabase = async () => {
   }
 };
 
-export { models, syncDatabase };
-export default models;
+export { User, Film, Purchase, View, syncDatabase };

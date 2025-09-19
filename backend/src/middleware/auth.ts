@@ -37,8 +37,10 @@ export const verifyToken = async (req: AuthenticatedRequest, res: Response, next
     req.user = user;
     req.walletAddress = decoded.walletAddress;
     next();
+    return;
   } catch (error) {
     res.status(401).json({ error: 'Invalid token.' });
+    return;
   }
 };
 
@@ -63,8 +65,10 @@ export const verifyWalletSignature = async (req: AuthenticatedRequest, res: Resp
 
     req.walletAddress = walletAddress;
     next();
+    return;
   } catch (error) {
     res.status(401).json({ error: 'Failed to verify wallet signature.' });
+    return;
   }
 };
 
@@ -87,8 +91,10 @@ export const verifyNFTOwnership = async (req: AuthenticatedRequest, res: Respons
     }
 
     next();
+    return;
   } catch (error) {
     res.status(500).json({ error: 'Failed to verify NFT ownership.' });
+    return;
   }
 };
 
@@ -106,8 +112,10 @@ export const requireProducer = async (req: AuthenticatedRequest, res: Response, 
     }
 
     next();
+    return;
   } catch (error) {
     res.status(500).json({ error: 'Failed to verify producer status.' });
+    return;
   }
 };
 
@@ -118,7 +126,7 @@ export const generateToken = (walletAddress: string, userId: number): string => 
   return jwt.sign(
     { walletAddress, userId },
     process.env.JWT_SECRET!,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as any
   );
 };
 

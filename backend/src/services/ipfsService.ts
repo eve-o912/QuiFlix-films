@@ -7,9 +7,26 @@ class IPFSService {
   private gatewayUrl: string;
 
   constructor() {
-    this.client = create({
-      url: process.env.IPFS_API_URL || 'http://localhost:5001'
-    });
+    const apiUrl = process.env.IPFS_API_URL || 'http://localhost:5001';
+    const apiKey = process.env.IPFS_API_KEY;
+    const apiSecret = process.env.IPFS_API_SECRET;
+
+    if (apiKey && apiSecret) {
+      // For Infura or other authenticated services
+      this.client = create({
+        url: apiUrl,
+        headers: {
+          authorization: 'Basic ' + Buffer.from(apiKey + ':' + apiSecret).toString('base64')
+        }
+      });
+    } else if (apiKey) {
+      // Try with API key in URL for services that support it
+      const urlWithKey = apiUrl.includes('?') ? `${apiUrl}&key=${apiKey}` : `${apiUrl}?key=${apiKey}`;
+      this.client = create({ url: urlWithKey });
+    } else {
+      this.client = create({ url: apiUrl });
+    }
+
     this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs/';
   }
 
@@ -66,7 +83,7 @@ class IPFSService {
     try {
       const jsonString = JSON.stringify(metadata, null, 2);
       const buffer = Buffer.from(jsonString, 'utf8');
-      
+
       return await this.uploadBuffer(buffer, fileName);
     } catch (error) {
       console.error('Error uploading metadata to IPFS:', error);

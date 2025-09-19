@@ -52,10 +52,12 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response)
       },
       token
     });
+    return;
 
   } catch (error) {
     console.error('Error authenticating user:', error);
     res.status(500).json({ error: 'Failed to authenticate user' });
+    return;
   }
 };
 
@@ -119,10 +121,12 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
         profileImage: user.profileImage
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error updating user profile:', error);
     res.status(500).json({ error: 'Failed to update user profile' });
+    return;
   }
 };
 
@@ -149,10 +153,12 @@ export const becomeProducer = async (req: AuthenticatedRequest, res: Response) =
         isProducer: true
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error becoming producer:', error);
     res.status(500).json({ error: 'Failed to become producer' });
+    return;
   }
 };
 
@@ -212,6 +218,7 @@ export const getUserPurchases = async (req: AuthenticatedRequest, res: Response)
         limit: parseInt(limit as string)
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error getting user purchases:', error);
@@ -254,6 +261,7 @@ export const getUserViews = async (req: AuthenticatedRequest, res: Response) => 
         limit: parseInt(limit as string)
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error getting user views:', error);
@@ -280,9 +288,11 @@ export const getSignMessage = async (req: Request, res: Response) => {
       message,
       timestamp
     });
+    return;
 
   } catch (error) {
     console.error('Error generating sign message:', error);
     res.status(500).json({ error: 'Failed to generate sign message' });
+    return;
   }
 };

@@ -23,6 +23,11 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public isProducer!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+
+  // Association methods
+  public getPurchases!: (options?: any) => Promise<any[]>;
+  public getViews!: (options?: any) => Promise<any[]>;
+  public getFilms!: (options?: any) => Promise<any[]>;
 }
 
 User.init(
@@ -60,6 +65,16 @@ User.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
     }
   },
   {

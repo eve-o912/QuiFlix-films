@@ -77,7 +77,7 @@ class BlockchainService {
       );
 
       const receipt = await tx.wait();
-      const event = receipt.logs.find(log => {
+      const event = receipt.logs.find((log: any) => {
         try {
           const parsed = this.nftContract.interface.parseLog(log);
           return parsed?.name === 'FilmCreated';
@@ -183,7 +183,7 @@ class BlockchainService {
       const tx = await this.contentContract.createContent(title, ipfsHash);
       const receipt = await tx.wait();
 
-      const event = receipt.logs.find(log => {
+      const event = receipt.logs.find((log: any) => {
         try {
           const parsed = this.contentContract.interface.parseLog(log);
           return parsed?.name === 'ContentCreated';

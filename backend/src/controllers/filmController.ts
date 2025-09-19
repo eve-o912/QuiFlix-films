@@ -104,7 +104,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       producerId: req.user!.id,
       ipfsHash: filmIpfsHash,
       price: price.toString(),
-      thumbnailUrl: thumbnailIpfsHash ? ipfsService.getGatewayUrl(thumbnailIpfsHash) : null,
+      thumbnailUrl: thumbnailIpfsHash ? ipfsService.getGatewayUrl(thumbnailIpfsHash) : undefined,
       isActive: true,
       totalViews: 0,
       totalRevenue: '0'
@@ -136,10 +136,12 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
         metadataIpfsHash
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error uploading film:', error);
     res.status(500).json({ error: 'Failed to upload film' });
+    return;
   }
 };
 
@@ -201,10 +203,12 @@ export const purchaseFilm = async (req: AuthenticatedRequest, res: Response) => 
         price: price.toString()
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error purchasing film:', error);
     res.status(500).json({ error: 'Failed to purchase film' });
+    return;
   }
 };
 
@@ -253,12 +257,14 @@ export const streamFilm = async (req: AuthenticatedRequest, res: Response) => {
         ipfsHash: film.ipfsHash
       }
     });
+    return;
 
   } catch (error) {
     console.error('Error streaming film:', error);
     res.status(500).json({ error: 'Failed to stream film' });
+    return;
   }
-};
+ };
 
 /**
  * Resell NFT (secondary market logic)
@@ -292,10 +298,12 @@ export const resellNFT = async (req: AuthenticatedRequest, res: Response) => {
       tokenId,
       newPrice: newPrice.toString()
     });
+    return;
 
   } catch (error) {
     console.error('Error reselling NFT:', error);
     res.status(500).json({ error: 'Failed to resell NFT' });
+    return;
   }
 };
 
@@ -330,20 +338,22 @@ export const getFilmAnalytics = async (req: AuthenticatedRequest, res: Response)
         totalViews: film.totalViews,
         totalRevenue: film.totalRevenue
       },
-      purchases: film.purchases?.length || 0,
-      views: film.views?.length || 0,
-      averageViewDuration: film.views?.reduce((sum, view) => sum + view.duration, 0) / (film.views?.length || 1),
-      completionRate: film.views?.filter(view => view.completed).length / (film.views?.length || 1)
+      purchases: (film as any).purchases?.length || 0,
+      views: (film as any).views?.length || 0,
+      averageViewDuration: (film as any).views?.reduce((sum: number, view: any) => sum + view.duration, 0) / ((film as any).views?.length || 1),
+      completionRate: (film as any).views?.filter((view: any) => view.completed).length / ((film as any).views?.length || 1)
     };
 
     res.json({
       success: true,
       analytics
     });
+    return;
 
   } catch (error) {
     console.error('Error getting film analytics:', error);
     res.status(500).json({ error: 'Failed to get film analytics' });
+    return;
   }
 };
 
@@ -367,7 +377,7 @@ export const getProducerRevenue = async (req: AuthenticatedRequest, res: Respons
     }, BigInt(0));
 
     const totalViews = films.reduce((sum, film) => sum + film.totalViews, 0);
-    const totalPurchases = films.reduce((sum, film) => sum + (film.purchases?.length || 0), 0);
+    const totalPurchases = films.reduce((sum, film) => sum + ((film as any).purchases?.length || 0), 0);
 
     const revenueReport = {
       producer: {
@@ -385,7 +395,7 @@ export const getProducerRevenue = async (req: AuthenticatedRequest, res: Respons
         title: film.title,
         totalRevenue: film.totalRevenue,
         totalViews: film.totalViews,
-        purchases: film.purchases?.length || 0
+        purchases: (film as any).purchases?.length || 0
       }))
     };
 
@@ -397,6 +407,7 @@ export const getProducerRevenue = async (req: AuthenticatedRequest, res: Respons
   } catch (error) {
     console.error('Error getting producer revenue:', error);
     res.status(500).json({ error: 'Failed to get producer revenue' });
+    return;
   }
 };
 
@@ -410,7 +421,7 @@ export const getAllFilms = async (req: Request, res: Response) => {
     const where: any = { isActive: true };
     if (genre) where.genre = genre;
     if (producer) {
-      const producerUser = await User.findOne({ where: { walletAddress: producer } });
+      const producerUser = await User.findOne({ where: { walletAddress: producer as string } });
       if (producerUser) where.producerId = producerUser.id;
     }
 
@@ -458,9 +469,11 @@ export const getFilmById = async (req: Request, res: Response) => {
       success: true,
       film
     });
+    return;
 
   } catch (error) {
     console.error('Error getting film:', error);
     res.status(500).json({ error: 'Failed to get film' });
+    return;
   }
 };
