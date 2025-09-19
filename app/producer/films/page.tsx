@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import Link from "next/link"
 
 export default function MyFilmsPage() {
   const mockFilms = [
@@ -55,7 +56,9 @@ export default function MyFilmsPage() {
           <h1 className="text-3xl font-bold text-foreground mb-2">My Films</h1>
           <p className="text-muted-foreground">Manage your uploaded films and track their performance</p>
         </div>
-        <Button>Upload New Film</Button>
+        <Button asChild>
+          <Link href="/producer/upload">Upload New Film</Link>
+        </Button>
       </div>
 
       {/* Filters */}
@@ -174,7 +177,9 @@ export default function MyFilmsPage() {
           <p className="text-muted-foreground text-center mb-4">
             Add a new film to your collection and start selling NFT tickets
           </p>
-          <Button>Get Started</Button>
+          <Button asChild>
+            <Link href="/producer/upload">Get Started</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>
