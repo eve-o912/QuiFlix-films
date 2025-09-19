@@ -4,11 +4,16 @@ import { useWeb3 } from '@/hooks/useWeb3';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Wallet, LogOut, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function WalletConnect() {
   const { address, isConnected, connectWallet, disconnectWallet } = useWeb3();
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const copyAddress = async () => {
     if (address) {
@@ -21,6 +26,10 @@ export function WalletConnect() {
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   if (!isConnected) {
     return (
