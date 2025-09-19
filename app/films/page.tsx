@@ -196,34 +196,36 @@ export default function FilmsPage() {
 
       <div className="container px-4 py-8">
         {/* Page Header */}
-        <div className="mb-8">
+        <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-2">Browse Films</h1>
           <p className="text-muted-foreground text-lg">Discover premium films and own your viewing experience</p>
         </div>
 
-        {/* Filters and Search */}
-        <div className="mb-8 space-y-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search films, genres..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        {/* Search Bar - Centered */}
+        <div className="py-8 mb-6 flex justify-center">
+          <div className="relative w-full max-w-2xl">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+            <Input
+              placeholder="Search films, genres..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 pr-4 py-3 rounded-3xl text-center placeholder:text-center border-2 focus:border-primary"
+            />
+          </div>
+        </div>
 
+        {/* Filters and Controls */}
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-end">
             {/* Filters */}
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-3 items-center justify-center lg:justify-end">
               {/* Genre Filter */}
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap justify-center">
                 {genres.map((genre) => (
                   <Badge
                     key={genre}
                     variant={selectedGenre === genre ? "default" : "outline"}
-                    className={`cursor-pointer transition-colors ${
+                    className={`cursor-pointer transition-colors text-xs px-3 py-1 ${
                       selectedGenre === genre ? "bg-primary text-primary-foreground" : "hover:bg-accent"
                     }`}
                     onClick={() => setSelectedGenre(genre)}
@@ -270,8 +272,8 @@ export default function FilmsPage() {
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-muted-foreground text-center sm:text-left">
               {filteredFilms.length} film{filteredFilms.length !== 1 ? "s" : ""} found
             </p>
             {(searchQuery || selectedGenre !== "All") && (
@@ -282,6 +284,7 @@ export default function FilmsPage() {
                   setSearchQuery("")
                   setSelectedGenre("All")
                 }}
+                className="text-xs"
               >
                 Clear filters
               </Button>
@@ -293,50 +296,63 @@ export default function FilmsPage() {
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredFilms.map((film) => (
-              <FilmCard
-                key={film.id}
-                {...film}
-                onBuyNFT={() => handleBuyNFT(film)}
-                onBuyDirect={() => handleBuyDirect(film)}
-                onPlay={() => handlePlay(film)}
-              />
+              <div 
+                key={film.id} 
+                className="group cursor-pointer bg-card rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
+                onClick={() => film.owned ? handlePlay(film) : handleBuyNFT(film)}
+              >
+                <div className="aspect-[3/2] overflow-hidden">
+                  <img
+                    src={film.poster || "/placeholder.svg"}
+                    alt={film.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  />
+                </div>
+                <div className="p-4 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <h3 className="font-semibold text-lg leading-tight truncate flex-1 mr-2">{film.title}</h3>
+                    {film.owned && <Badge className="bg-primary text-xs flex-shrink-0">Owned</Badge>}
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{film.genre}</span>
+                    <span className="flex items-center gap-1">
+                      ⭐ {film.rating}
+                    </span>
+                  </div>
+                  {!film.owned && (
+                    <div className="pt-1">
+                      <span className="text-primary font-medium">{film.price}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {filteredFilms.map((film) => (
-              <div key={film.id} className="flex gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+              <div 
+                key={film.id} 
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                onClick={() => film.owned ? handlePlay(film) : handleBuyNFT(film)}
+              >
                 <img
                   src={film.poster || "/placeholder.svg"}
                   alt={film.title}
-                  className="w-24 h-36 object-cover rounded"
+                  className="w-full sm:w-20 md:w-24 h-32 sm:h-24 md:h-28 object-cover rounded mx-auto sm:mx-0"
                 />
                 <div className="flex-1 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-lg">{film.title}</h3>
-                      <p className="text-muted-foreground">
-                        {film.year} • {film.genre} • ⭐ {film.rating}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div className="text-center sm:text-left">
+                      <h3 className="font-semibold text-base sm:text-lg">{film.title}</h3>
+                      <p className="text-muted-foreground text-sm">
+                        {film.genre} • ⭐ {film.rating}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1">{film.description}</p>
+                      {!film.owned && (
+                        <p className="text-primary font-medium text-sm mt-1">{film.price}</p>
+                      )}
                     </div>
-                    {film.owned && <Badge className="bg-primary">Owned</Badge>}
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    {!film.owned ? (
-                      <>
-                        <Button onClick={() => handleBuyNFT(film)} className="bg-primary hover:bg-primary/90">
-                          Buy NFT - {film.price}
-                        </Button>
-                        <Button onClick={() => handleBuyDirect(film)} variant="outline">
-                          Buy Direct
-                        </Button>
-                      </>
-                    ) : (
-                      <Button onClick={() => handlePlay(film)} className="bg-primary hover:bg-primary/90">
-                        Watch Now
-                      </Button>
-                    )}
+                    {film.owned && <Badge className="bg-primary self-center sm:self-start">Owned</Badge>}
                   </div>
                 </div>
               </div>

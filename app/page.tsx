@@ -1,383 +1,131 @@
 "use client"
 
 import { useState } from "react"
-import { Header } from "@/components/header"
-import { FilmCard } from "@/components/film-card"
-import { CheckoutModal } from "@/components/checkout-modal"
-import { Button } from "@/components/ui/button"
+
 import { Badge } from "@/components/ui/badge"
-import { Play, TrendingUp, Users, Shield } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { FilmCard } from "@/components/film-card"
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
+import { WalletsModal } from "@/modals/wallets"
+import { faqs } from "@/utils/faq"
+import { trendingFilms } from "@/utils/trending"
 
-const featuredFilms = [
-  {
-    id: "1",
-    title: "Quantum Horizons",
-    year: 2024,
-    genre: "Sci-Fi",
-    rating: 8.9,
-    price: "0.05 ETH",
-    poster: "/futuristic-sci-fi-movie-poster.jpg",
-    owned: false,
-  },
-  {
-    id: "2",
-    title: "The Last Symphony",
-    year: 2024,
-    genre: "Drama",
-    rating: 9.2,
-    price: "0.03 ETH",
-    poster: "/dramatic-music-movie-poster.jpg",
-    owned: true,
-  },
-  {
-    id: "3",
-    title: "Digital Rebellion",
-    year: 2024,
-    genre: "Action",
-    rating: 8.7,
-    price: "0.04 ETH",
-    poster: "/cyberpunk-action-movie-poster.jpg",
-    owned: false,
-  },
-]
+export default function LandingPage() {
+    const [dialogOpen, setDialogOpen] = useState(false)
 
-const trendingFilms = [
-  {
-    id: "4",
-    title: "Neon Dreams",
-    year: 2024,
-    genre: "Thriller",
-    rating: 8.5,
-    price: "0.02 ETH",
-    poster: "/neon-noir-thriller-poster.jpg",
-    owned: false,
-  },
-  {
-    id: "5",
-    title: "Ocean's Edge",
-    year: 2024,
-    genre: "Adventure",
-    rating: 8.8,
-    price: "0.03 ETH",
-    poster: "/ocean-adventure-movie-poster.jpg",
-    owned: false,
-  },
-  {
-    id: "6",
-    title: "Mind Palace",
-    year: 2024,
-    genre: "Mystery",
-    rating: 9.0,
-    price: "0.04 ETH",
-    poster: "/psychological-mystery-movie-poster.jpg",
-    owned: false,
-  },
-]
 
-export default function HomePage() {
-  const [checkoutModal, setCheckoutModal] = useState<{
-    isOpen: boolean
-    filmTitle: string
-    price: string
-    filmId: string
-    purchaseType: "nft" | "direct"
-  }>({
-    isOpen: false,
-    filmTitle: "",
-    price: "",
-    filmId: "",
-    purchaseType: "nft",
-  })
+    return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
+            {/* Hero Section with background image */}
+            <section className="relative w-full flex flex-col items-center justify-center min-h-screen h-screen overflow-hidden">
+                <img
+                    src="/cinematic-movie-theater-with-neon-lights.jpg"
+                    alt="Hero Background"
+                    className="absolute inset-0 w-full h-full object-cover opacity-60 z-0"
+                />
+                {/* Top bar with logo and Get Started button */}
+                    <div className="absolute z-20 top-0 left-0 w-full flex items-center justify-between px-8 py-4">
+                    {/* Logo top left */}
+                    <div className="flex items-center gap-2">
+                        <img src="/placeholder-logo.png" alt="QuiFlix Logo" className="h-16 w-16 rounded bg-primary p-1" />
+                    </div>
+                    {/* Get Started button top right */}
+                    <WalletsModal
+                        open={dialogOpen}
+                        onOpenChange={setDialogOpen}
+                        redirectTo="/films"
+                        trigger={
+                            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-3 shadow-lg" onClick={() => setDialogOpen(true)}>
+                                Get Started
+                            </Button>
+                        }
+                    />
+                </div>
+                {/* Centered hero content */}
+                <div className="relative z-10 flex flex-col items-center justify-center px-4 py-20">
+                    <h1 className="text-5xl md:text-5xl font-bold mb-4 text-balance text-center">
+                        Own Your Movie
+                        <span className="text-primary block">Experience</span>
+                    </h1>
+                    <p className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl mx-auto text-balance text-center">
+                        Stream premium films and own NFT tickets. No wallet? No problem. Buy directly and claim your NFT anytime.
+                    </p>
+                </div>
+            </section>
 
-  const handleBuyNFT = (film: any) => {
-    console.log("[v0] NFT purchase initiated for:", film.title)
-    setCheckoutModal({
-      isOpen: true,
-      filmTitle: film.title,
-      price: film.price,
-      filmId: film.id,
-      purchaseType: "nft",
-    })
-  }
 
-  const handleBuyDirect = (film: any) => {
-    console.log("[v0] Direct purchase initiated for:", film.title)
-    setCheckoutModal({
-      isOpen: true,
-      filmTitle: film.title,
-      price: film.price,
-      filmId: film.id,
-      purchaseType: "direct",
-    })
-  }
+            {/* Why QuiFlix Section */}
+            <section className="relative z-10 w-full max-w-5xl mx-auto px-4 py-16 bg-background">
+                <h2 className="text-3xl font-bold mb-6 text-center text-primary">Why Choose QuiFlix?</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    <div className="bg-card rounded-lg p-8 shadow">
+                        <h3 className="text-xl font-semibold mb-2 text-primary">True Ownership</h3>
+                        <p className="text-muted-foreground">Own your movie experience with NFT tickets that prove your access and support for creators.</p>
+                    </div>
+                    <div className="bg-card rounded-lg p-8 shadow">
+                        <h3 className="text-xl font-semibold mb-2 text-primary">No Wallet? No Problem</h3>
+                        <p className="text-muted-foreground">Buy films directly with traditional payments and claim your NFT anytime—no crypto knowledge required.</p>
+                    </div>
+                    <div className="bg-card rounded-lg p-8 shadow">
+                        <h3 className="text-xl font-semibold mb-2 text-primary">Support Creators</h3>
+                        <p className="text-muted-foreground">Your purchases go directly to filmmakers, empowering a new era of independent cinema.</p>
+                    </div>
+                </div>
+            </section>
 
-  const handlePlay = (film: any) => {
-    console.log("[v0] Playing film:", film.title)
-    // TODO: Navigate to video player with film ID
-    window.location.href = `/watch/${film.id}`
-  }
+            {/* Trending Section */}
+            <section className="relative z-10 w-full max-w-6xl mx-auto px-4 py-12 bg-background">
+                <h2 className="text-3xl font-bold mb-6 text-center text-primary">Trending Now</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                    {trendingFilms.map(film => (
+                        <FilmCard key={film.id} title={film.title} poster={film.poster} id={""} year={0} genre={""} rating={0} price={""} />
+                    ))}
+                </div>
+            </section>
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
+            {/* Testimonials Section */}
+            <section className="relative z-10 w-full max-w-4xl mx-auto px-4 py-16 bg-background">
+                <h2 className="text-3xl font-bold mb-8 text-center text-primary">What Our Users Say</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="bg-card rounded-lg p-6 shadow flex flex-col items-center">
+                        <img src="/placeholder-user.jpg" alt="User 1" className="h-16 w-16 rounded-full mb-4" />
+                        <p className="italic mb-2">"QuiFlix made it so easy to support my favorite indie filmmakers and actually own my movie tickets!"</p>
+                        <span className="font-semibold text-primary">— Alex M.</span>
+                    </div>
+                    <div className="bg-card rounded-lg p-6 shadow flex flex-col items-center">
+                        <img src="/placeholder-user.jpg" alt="User 2" className="h-16 w-16 rounded-full mb-4" />
+                        <p className="italic mb-2">"I love that I can buy movies without a crypto wallet and claim my NFT later. Super simple!"</p>
+                        <span className="font-semibold text-primary">— Jamie L.</span>
+                    </div>
+                    <div className="bg-card rounded-lg p-6 shadow flex flex-col items-center">
+                        <img src="/placeholder-user.jpg" alt="User 3" className="h-16 w-16 rounded-full mb-4" />
+                        <p className="italic mb-2">"The future of streaming is here. QuiFlix is empowering both viewers and creators!"</p>
+                        <span className="font-semibold text-primary">— Priya S.</span>
+                    </div>
+                </div>
+            </section>
 
-      {/* Hero Section */}
-      <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
-        <img
-          src="/cinematic-movie-theater-with-neon-lights.jpg"
-          alt="Hero Background"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+            {/* FAQ Section */}
+            <section className="relative z-10 w-full max-w-3xl mx-auto px-4 py-12 bg-background">
+                <h2 className="text-3xl font-bold mb-6 text-center text-primary">Frequently Asked Questions</h2>
+                <Accordion type="single" collapsible className="w-full">
+                    {faqs.map((faq, idx) => (
+                        <AccordionItem value={faq.question} key={idx}>
+                            <AccordionTrigger>{faq.question}</AccordionTrigger>
+                            <AccordionContent>{faq.answer}</AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            </section>
 
-        <div className="relative z-20 container px-4 text-center">
-          <Badge className="mb-4 bg-primary text-white border-primary">The Future of Cinema</Badge>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-balance">
-            Own Your Movie
-            <span className="text-primary block">Experience</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto text-balance">
-            Stream premium films and own NFT tickets. No wallet? No problem. Buy directly and claim your NFT anytime.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6">
-              <Play className="mr-2 h-5 w-5" />
-              Start Watching
-            </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-background/80 backdrop-blur">
-              Browse Films
-            </Button>
-          </div>
+            {/* Footer */}
+            <footer className="relative z-10 w-full bg-background/80 border-t border-muted py-6 mt-8 flex flex-col items-center text-center text-muted-foreground">
+                <div className="flex flex-row items-center justify-between gap-2 mb-2">
+                    <img src="/placeholder-logo.png" alt="QuiFlix Logo" className="h-8 w-8 rounded bg-primary p-1" />
+                    <span className="font-bold text-lg">QuiFlix</span>
+                </div>
+                <div className="text-xs">&copy; {new Date().getFullYear()} QuiFlix. All rights reserved.</div>
+            </footer>
         </div>
-      </section>
-
-      {/* Featured Films */}
-      <section className="py-16 container px-4">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Films</h2>
-            <p className="text-muted-foreground">Handpicked premium content</p>
-          </div>
-          <Button variant="outline">View All</Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredFilms.map((film) => (
-            <FilmCard
-              key={film.id}
-              {...film}
-              onBuyNFT={() => handleBuyNFT(film)}
-              onBuyDirect={() => handleBuyDirect(film)}
-              onPlay={() => handlePlay(film)}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 bg-muted/30">
-        <div className="container px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="space-y-2">
-              <div className="flex items-center justify-center">
-                <TrendingUp className="h-8 w-8 text-primary mb-2" />
-              </div>
-              <h3 className="text-3xl font-bold">10K+</h3>
-              <p className="text-muted-foreground">NFT Tickets Sold</p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-center">
-                <Users className="h-8 w-8 text-primary mb-2" />
-              </div>
-              <h3 className="text-3xl font-bold">5K+</h3>
-              <p className="text-muted-foreground">Active Viewers</p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-center">
-                <Shield className="h-8 w-8 text-primary mb-2" />
-              </div>
-              <h3 className="text-3xl font-bold">100%</h3>
-              <p className="text-muted-foreground">Secure Streaming</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Trending Now */}
-      <section className="py-16 container px-4">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Trending Now</h2>
-            <p className="text-muted-foreground">What everyone's watching</p>
-          </div>
-          <Button variant="outline">View All</Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trendingFilms.map((film) => (
-            <FilmCard
-              key={film.id}
-              {...film}
-              onBuyNFT={() => handleBuyNFT(film)}
-              onBuyDirect={() => handleBuyDirect(film)}
-              onPlay={() => handlePlay(film)}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-16 bg-muted/30">
-        <div className="container px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Three simple ways to enjoy premium cinema</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-2xl font-bold text-primary">1</span>
-              </div>
-              <h3 className="text-xl font-semibold">Choose Your Film</h3>
-              <p className="text-muted-foreground">
-                Browse our curated collection of premium films and select what you want to watch.
-              </p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-2xl font-bold text-primary">2</span>
-              </div>
-              <h3 className="text-xl font-semibold">Buy Your Way</h3>
-              <p className="text-muted-foreground">
-                Pay with crypto for instant NFT ownership, or use card/M-Pesa and claim your NFT later.
-              </p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-2xl font-bold text-primary">3</span>
-              </div>
-              <h3 className="text-xl font-semibold">Watch & Own</h3>
-              <p className="text-muted-foreground">
-                Stream instantly and own your ticket forever. Trade, collect, or just enjoy the show.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 container px-4">
-        <div className="bg-primary/10 rounded-2xl p-8 md:p-12 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Experience the Future?</h2>
-          <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
-            Join thousands of film lovers who are already collecting and streaming with QuiFlix.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-primary hover:bg-primary/90">
-              Start Your Collection
-            </Button>
-            <Button size="lg" variant="outline">
-              Learn More
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t py-12 mt-16">
-        <div className="container px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-sm">QF</span>
-                </div>
-                <span className="font-bold text-xl">QuiFlix</span>
-              </div>
-              <p className="text-muted-foreground">The future of cinema streaming and NFT ownership.</p>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-semibold">Platform</h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Browse Films
-                  </a>
-                </div>
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    How It Works
-                  </a>
-                </div>
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Pricing
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-semibold">Support</h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Help Center
-                  </a>
-                </div>
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Contact Us
-                  </a>
-                </div>
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Claim NFT
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-semibold">Legal</h4>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Privacy Policy
-                  </a>
-                </div>
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Terms of Service
-                  </a>
-                </div>
-                <div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground">
-                    Cookie Policy
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-8 mt-8 text-center text-muted-foreground text-sm">
-            <p>&copy; 2024 QuiFlix. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-
-      <CheckoutModal
-        isOpen={checkoutModal.isOpen}
-        onClose={() => setCheckoutModal({ ...checkoutModal, isOpen: false })}
-        filmTitle={checkoutModal.filmTitle}
-        price={checkoutModal.price}
-        filmId={checkoutModal.filmId}
-        purchaseType={checkoutModal.purchaseType}
-      />
-    </div>
-  )
+    )
 }

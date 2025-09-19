@@ -6,7 +6,7 @@ import { VideoPlayer } from "@/components/video-player"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowLeft, Share, Heart, Download } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 // Mock film data - in real app this would come from API based on ID and access token
@@ -66,7 +66,6 @@ export default function WatchPage({
   searchParams: { token?: string }
 }) {
   const [filmData, setFilmData] = useState<any>(null)
-  const [isLiked, setIsLiked] = useState(false)
   const [accessVerified, setAccessVerified] = useState(false)
 
   useEffect(() => {
@@ -82,26 +81,6 @@ export default function WatchPage({
       console.log("[v0] Access verified, loading film:", film.title)
     }, 1000)
   }, [params.id, searchParams.token])
-
-  const handleShare = () => {
-    console.log("[v0] Sharing film:", filmData?.title)
-    if (navigator.share) {
-      navigator.share({
-        title: filmData?.title,
-        text: `Watch ${filmData?.title} on QuiFlix`,
-        url: window.location.origin + `/films/${params.id}`,
-      })
-    } else {
-      navigator.clipboard.writeText(window.location.origin + `/films/${params.id}`)
-      alert("Link copied to clipboard!")
-    }
-  }
-
-  const handleDownload = () => {
-    console.log("[v0] Download requested for:", filmData?.title)
-    // In real app, this would initiate a secure download
-    alert("Download feature coming soon! NFT holders will be able to download films for offline viewing.")
-  }
 
   if (!accessVerified || !filmData) {
     return (
@@ -120,30 +99,12 @@ export default function WatchPage({
 
       <div className="container px-4 py-8">
         {/* Back Navigation */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center mb-6">
           <Link href="/films">
             <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Films
+              <ArrowLeft className="h-6 w-6" />
             </Button>
           </Link>
-
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setIsLiked(!isLiked)} variant="outline" size="sm">
-              <Heart className={`h-4 w-4 mr-2 ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
-              {isLiked ? "Liked" : "Like"}
-            </Button>
-            <Button onClick={handleShare} variant="outline" size="sm">
-              <Share className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-            {filmData.owned && (
-              <Button onClick={handleDownload} variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            )}
-          </div>
         </div>
 
         {/* Video Player */}
@@ -199,57 +160,7 @@ export default function WatchPage({
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Ownership Status */}
-            {filmData.owned && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-bold mb-4 text-green-600">You Own This Film</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">NFT Token ID</span>
-                      <span className="font-mono">#{filmData.nftDetails.tokenId}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Contract</span>
-                      <span className="font-mono text-xs">{filmData.nftDetails.contract}</span>
-                    </div>
-                    <div className="pt-2">
-                      <Badge className="w-full justify-center bg-green-100 text-green-800">Lifetime Access</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Film Poster */}
-            <Card>
-              <CardContent className="p-0">
-                <img src={filmData.poster || "/placeholder.svg"} alt={filmData.title} className="w-full rounded-lg" />
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-bold mb-4">Quick Actions</h3>
-                <div className="space-y-2">
-                  <Button onClick={handleShare} variant="outline" className="w-full justify-start bg-transparent">
-                    <Share className="mr-2 h-4 w-4" />
-                    Share Film
-                  </Button>
-                  {filmData.owned && (
-                    <Button onClick={handleDownload} variant="outline" className="w-full justify-start bg-transparent">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                  )}
-                  <Link href={`/films/${params.id}`} className="block">
-                    <Button variant="outline" className="w-full justify-start bg-transparent">
-                      View Details
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
