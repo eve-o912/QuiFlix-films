@@ -1,55 +1,44 @@
 "use client"
 
 import { useState } from "react"
-
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { FilmCard } from "@/components/film-card"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { WalletsModal } from "@/modals/wallets"
 import { faqs } from "@/utils/faq"
 import { trendingFilms } from "@/utils/trending"
+import Image from "next/image"
+import { PageLayout } from "@/components/page-layout"
 
 export default function LandingPage() {
     const [dialogOpen, setDialogOpen] = useState(false)
 
 
     return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
+        <PageLayout fullWidth>
             {/* Hero Section with background image */}
             <section className="relative w-full flex flex-col items-center justify-center min-h-screen h-screen overflow-hidden">
-                <img
+                <Image
                     src="/cinematic-movie-theater-with-neon-lights.jpg"
                     alt="Hero Background"
-                    className="absolute inset-0 w-full h-full object-cover opacity-60 z-0"
+                    fill
+                    className="object-cover opacity-60 z-0"
+                    priority
                 />
-                {/* Top bar with logo and Get Started button */}
-                    <div className="absolute z-20 top-0 left-0 w-full flex items-center justify-between px-8 py-4">
-                    {/* Logo top left */}
-                    <div className="flex items-center gap-2">
-                        <img src="/placeholder-logo.png" alt="QuiFlix Logo" className="h-16 w-16 rounded bg-primary p-1" />
-                    </div>
-                    {/* Get Started button top right */}
-                    <WalletsModal
-                        open={dialogOpen}
-                        onOpenChange={setDialogOpen}
-                        redirectTo="/films"
-                        trigger={
-                            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-3 shadow-lg" onClick={() => setDialogOpen(true)}>
-                                Get Started
-                            </Button>
-                        }
-                    />
-                </div>
                 {/* Centered hero content */}
                 <div className="relative z-10 flex flex-col items-center justify-center px-4 py-20">
-                    <h1 className="text-5xl md:text-5xl font-bold mb-4 text-balance text-center">
+                    <h1 className="text-5xl md:text-6xl font-bold mb-4 text-balance text-center">
                         Own Your Movie
                         <span className="text-primary block">Experience</span>
                     </h1>
-                    <p className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl mx-auto text-balance text-center">
+                    <p className="text-base md:text-lg text-muted-foreground mb-8 max-w-2xl mx-auto text-balance text-center">
                         Stream premium films and own NFT tickets. No wallet? No problem. Buy directly and claim your NFT anytime.
                     </p>
+                    
+                            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-3 shadow-lg" onClick={() => { window.location.href = '/films'; }}>
+                                Get Started
+                            </Button>
+
                 </div>
             </section>
 
@@ -120,12 +109,18 @@ export default function LandingPage() {
 
             {/* Footer */}
             <footer className="relative z-10 w-full bg-background/80 border-t border-muted py-6 mt-8 flex flex-col items-center text-center text-muted-foreground">
-                <div className="flex flex-row items-center justify-between gap-2 mb-2">
-                    <img src="/placeholder-logo.png" alt="QuiFlix Logo" className="h-8 w-8 rounded bg-primary p-1" />
+                <div className="flex flex-row items-center gap-2 mb-2">
+                    <Image
+                        src="/quiflixlogo.png"
+                        alt="QuiFlix Logo"
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 object-contain"
+                    />
                     <span className="font-bold text-lg">QuiFlix</span>
                 </div>
                 <div className="text-xs">&copy; {new Date().getFullYear()} QuiFlix. All rights reserved.</div>
             </footer>
-        </div>
+        </PageLayout>
     )
 }

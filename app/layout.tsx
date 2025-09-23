@@ -5,6 +5,8 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { Web3Provider } from "@/components/web3-provider"
+import { Header } from "@/components/header"
+import { LayoutWrapper } from "@/components/layout-wrapper"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -23,7 +25,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Web3Provider>
-          <Suspense fallback={null}>{children}</Suspense>
+          <Header />
+          <LayoutWrapper>
+            <Suspense fallback={null}>{children}</Suspense>
+          </LayoutWrapper>
           <Analytics />
         </Web3Provider>
       </body>

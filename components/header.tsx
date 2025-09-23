@@ -1,10 +1,12 @@
 "use client"
 
 import { Search, User, LogOut, Copy, Check, Film, Settings, Upload } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { WalletConnect } from "@/components/wallet-connect"
+import { MobileSidebar } from "@/components/sidebar"
 import { useWeb3 } from "@/hooks/useWeb3"
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
@@ -22,6 +24,10 @@ export function Header() {
 
   // Check if we're on the films page
   const isOnFilmsPage = pathname === '/films'
+  // Check if we're on the main page (landing page)
+  const isMainPage = pathname === '/'
+  // Show sidebar only if user is connected OR not on main page
+  const showSidebar = isConnected || !isMainPage
 
   const copyAddress = async () => {
     if (address) {
@@ -57,9 +63,13 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">QF</span>
-            </div>
+            <Image
+              src="/quiflixlogo.png"
+              alt="QuiFlix Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
+            />
             <span className="font-bold text-xl">QuiFlix</span>
           </div>
           <div className="flex-1 max-w-md mx-8">
@@ -79,21 +89,23 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
-        {/* Logo */}
+        {/* Mobile Sidebar + Logo */}
         <div className="flex items-center space-x-2">
-          <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">QF</span>
-          </div>
-          <span className="font-bold text-xl">QuiFlix</span>
+          {showSidebar && (
+            <MobileSidebar>
+              <div />
+            </MobileSidebar>
+          )}
+          <Image
+            src="/quiflixlogo.png"
+            alt="QuiFlix Logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
+          <span className="font-bold text-xl hidden sm:inline">QuiFlix</span>
         </div>
 
-        {/* Search */}
-        <div className="flex-1 max-w-md mx-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input placeholder="Search films..." className="pl-10 bg-muted/50" />
-          </div>
-        </div>
 
         {/* Actions */}
         <div className="flex items-center space-x-3">

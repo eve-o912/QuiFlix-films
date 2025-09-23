@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Header } from "@/components/header"
 import { ClaimWidget } from "@/components/claim-widget"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, CheckCircle, AlertCircle } from "lucide-react"
+import { PageLayout } from "@/components/page-layout"
 import Link from "next/link"
 
 export default function ClaimPage({ searchParams }: { searchParams: { voucher?: string } }) {
@@ -53,7 +53,7 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+     
         <div className="container px-4 py-8 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -67,7 +67,7 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
   if (!voucherData) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+     
         <div className="container px-4 py-8">
           <div className="max-w-md mx-auto text-center">
             <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -87,7 +87,7 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
   if (claimStatus === "success") {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+    
         <div className="container px-4 py-8">
           <div className="max-w-md mx-auto text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
@@ -112,10 +112,7 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <div className="container px-4 py-8">
+    <PageLayout className="py-8">
         <div className="flex gap-2 mb-6">
           <Link href="/account">
             <Button variant="ghost" size="sm">
@@ -161,7 +158,7 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
             {/* Claim Widget */}
             <div>
               <ClaimWidget
-                voucherId={voucherData.voucherId}
+                id={voucherData.voucherId}
                 filmTitle={voucherData.filmTitle}
                 onSuccess={handleClaimSuccess}
                 onError={handleClaimError}
@@ -199,7 +196,6 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+    </PageLayout>
   )
 }

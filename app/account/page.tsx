@@ -77,7 +77,7 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+    
 
       <div className="container px-4 py-8">
         {/* Page Header */}

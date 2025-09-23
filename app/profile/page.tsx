@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -52,7 +51,7 @@ export default function ProfilePage() {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="animate-pulse space-y-4">
@@ -72,7 +71,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+    
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
