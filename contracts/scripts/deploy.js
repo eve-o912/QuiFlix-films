@@ -1,4 +1,5 @@
 const { ethers } = require("hardhat");
+const fs = require('fs');
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -16,7 +17,7 @@ async function main() {
   );
 
   await contentContract.waitForDeployment();
-  const contentAddress = await contentContract.getAddress();
+  const contentAddress = contentContract.target;
   console.log("QuiFlixContent deployed to:", contentAddress);
 
   // Deploy QuiFlixNFT
@@ -27,7 +28,7 @@ async function main() {
   );
 
   await nftContract.waitForDeployment();
-  const nftAddress = await nftContract.getAddress();
+  const nftAddress = nftContract.target;
   console.log("QuiFlixNFT deployed to:", nftAddress);
 
   // Save deployment info
@@ -43,6 +44,9 @@ async function main() {
 
   console.log("Deployment completed successfully!");
   console.log("Deployment info:", JSON.stringify(deploymentInfo, null, 2));
+
+  // Save deployment info to file
+  fs.writeFileSync('contracts/scripts/deployments.json', JSON.stringify(deploymentInfo, null, 2));
 }
 
 main()
