@@ -10,20 +10,17 @@ import {
   getFilmById,
   uploadMiddleware
 } from '../controllers/filmController';
-import { verifyToken, verifyWalletSignature, requireProducer } from '../middleware/auth';
 
 const router = Router();
 
-// Public routes
+// All routes are now public (authentication handled by Firebase + wallet addresses)
 router.get('/', getAllFilms);
 router.get('/:id', getFilmById);
-
-// Protected routes
-router.post('/upload', verifyToken, requireProducer, uploadMiddleware, uploadFilm);
-router.post('/purchase', verifyToken, purchaseFilm);
-router.get('/stream/:tokenId', verifyToken, streamFilm);
-router.post('/resell', verifyToken, resellNFT);
-router.get('/analytics/:filmId', verifyToken, getFilmAnalytics);
-router.get('/producer/revenue', verifyToken, requireProducer, getProducerRevenue);
+router.post('/upload', uploadMiddleware, uploadFilm);
+router.post('/purchase', purchaseFilm);
+router.get('/stream/:tokenId', streamFilm);
+router.post('/resell', resellNFT);
+router.get('/analytics/:filmId', getFilmAnalytics);
+router.get('/producer/revenue/:walletAddress', getProducerRevenue);
 
 export default router;

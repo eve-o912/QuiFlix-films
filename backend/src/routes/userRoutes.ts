@@ -1,28 +1,21 @@
 import { Router } from 'express';
 import {
-  authenticateUser,
   getUserProfile,
   updateUserProfile,
   becomeProducer,
   getUserNFTs,
   getUserPurchases,
-  getUserViews,
-  getSignMessage
+  getUserViews
 } from '../controllers/userController';
-import { verifyToken } from '../middleware/auth';
 
 const router = Router();
 
-// Public routes
-router.post('/sign-message', getSignMessage);
-router.post('/authenticate', authenticateUser);
-
-// Protected routes
-router.get('/profile', verifyToken, getUserProfile);
-router.put('/profile', verifyToken, updateUserProfile);
-router.post('/become-producer', verifyToken, becomeProducer);
-router.get('/nfts', verifyToken, getUserNFTs);
-router.get('/purchases', verifyToken, getUserPurchases);
-router.get('/views', verifyToken, getUserViews);
+// Public routes (no authentication required with Firebase)
+router.get('/profile/:walletAddress', getUserProfile);
+router.put('/profile/:walletAddress', updateUserProfile);
+router.post('/become-producer/:walletAddress', becomeProducer);
+router.get('/nfts/:walletAddress', getUserNFTs);
+router.get('/purchases/:walletAddress', getUserPurchases);
+router.get('/views/:walletAddress', getUserViews);
 
 export default router;
