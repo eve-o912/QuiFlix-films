@@ -5,11 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { 
   CustodialWallet, 
   StoredWallet, 
-  generateWalletFromEmail, 
   createStoredWallet, 
   getWalletBalance,
   fundWalletWithTestETH,
-  createWalletClientFromPrivateKey
+  createWalletClientFromPrivateKey,
+  encryptPrivateKeyForEmail,
+  decryptPrivateKeyForEmail,
+  generateRandomWallet
 } from '@/lib/custodial-wallet-simple';
 import { WalletClient } from 'viem';
 
@@ -57,13 +59,15 @@ export const useCustodialWallet = () => {
       let wallet: CustodialWallet;
       
       if (storedWalletData) {
-        // Wallet exists, retrieve it
+        // Wallet exists, decrypt it
         const storedWallet: StoredWallet = JSON.parse(storedWalletData);
-        wallet = generateWalletFromEmail(email); // We can regenerate since it's deterministic
+        if (!storedWallet.encrypted) throw new Error('Stored wallet missing encryption payload');
+        const privateKey = await decryptPrivateKeyForEmail(email, storedWallet.encrypted);
+        wallet = { address: storedWallet.address, privateKey };
       } else {
-        // Create new wallet and store it
-        wallet = generateWalletFromEmail(email);
-        const storedWallet = createStoredWallet(email);
+        // Create new random wallet and store encrypted
+        wallet = generateRandomWallet();
+        const storedWallet = await createStoredWallet(email, wallet);
         localStorage.setItem(storedWalletKey, JSON.stringify(storedWallet));
         
         // Fund new wallet with test ETH in development

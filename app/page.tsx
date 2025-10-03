@@ -4,14 +4,14 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { FilmCard } from "@/components/film-card"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
-import { WalletsModal } from "@/modals/wallets"
+import { SignupModal } from "@/components/signup-modal"
 import { faqs } from "@/utils/faq"
 import { trendingFilms } from "@/utils/trending"
 import Image from "next/image"
 import { PageLayout } from "@/components/page-layout"
 
 export default function LandingPage() {
-    const [dialogOpen, setDialogOpen] = useState(false)
+    const [authOpen, setAuthOpen] = useState(false)
 
 
     return (
@@ -35,9 +35,10 @@ export default function LandingPage() {
                         Stream premium films and own NFT tickets. No wallet? No problem. Buy directly and claim your NFT anytime.
                     </p>
                     
-                            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-3 shadow-lg" onClick={() => { window.location.href = '/films'; }}>
-                                Get Started
+                            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-3 shadow-lg" onClick={() => setAuthOpen(true)}>
+                                Sign In
                             </Button>
+                            <SignupModal open={authOpen} onOpenChange={setAuthOpen} />
 
                 </div>
             </section>

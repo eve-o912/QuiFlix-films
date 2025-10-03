@@ -2,8 +2,13 @@ const { ethers } = require("hardhat");
 const fs = require('fs');
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  if (!signers || signers.length === 0) {
+    throw new Error("No signer configured. Set LISK_SEPOLIA_PRIVATE_KEY in env for --network liskSepolia");
+  }
+  const deployer = signers[0];
 
+  console.log("Network:", network.name);
   console.log("Deploying contracts with the account:", deployer.address);
   console.log("Account balance:", (await deployer.provider.getBalance(deployer.address)).toString());
 
@@ -33,7 +38,7 @@ async function main() {
 
   // Save deployment info
   const deploymentInfo = {
-    network: "sepolia",
+    network: network.name,
     contracts: {
       QuiFlixContent: contentAddress,
       QuiFlixNFT: nftAddress

@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { WalletConnect } from "@/components/wallet-connect"
+import { SignupModal } from "@/components/signup-modal"
 import { MobileSidebar } from "@/components/sidebar"
 import { useWeb3 } from "@/hooks/useWeb3"
 import { useState, useEffect } from "react"
+import { useCustodialWallet } from "@/hooks/useCustodialWallet"
 import { useRouter, usePathname } from "next/navigation"
 
 export function Header() {
@@ -17,6 +19,8 @@ export function Header() {
   const pathname = usePathname()
   const [copied, setCopied] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
+  const { isConnected: isCustodialReady } = useCustodialWallet()
 
   useEffect(() => {
     setMounted(true)
@@ -122,7 +126,21 @@ export function Header() {
           )}
           
           {!isConnected ? (
-            <WalletConnect />
+            isMainPage ? (
+              <>
+                <Button 
+                  onClick={() => setAuthOpen(true)}
+                  className="flex items-center gap-2"
+                  size="sm"
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign In</span>
+                </Button>
+                <SignupModal open={authOpen} onOpenChange={setAuthOpen} />
+              </>
+            ) : (
+              <WalletConnect />
+            )
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger 

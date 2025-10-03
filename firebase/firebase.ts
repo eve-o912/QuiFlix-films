@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAnalytics, Analytics } from "firebase/analytics";
 import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,13 +17,19 @@ const firebaseConfig = {
 // Initialize Firebase (prevent multiple initialization)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize Analytics only on client-side
+// Initialize Analytics only on client-side and with consent
 let analytics: Analytics | undefined;
 if (typeof window !== 'undefined') {
-  analytics = getAnalytics(app);
+  try {
+    const consent = localStorage.getItem('analytics_consent');
+    if (consent === 'granted') {
+      analytics = getAnalytics(app);
+    }
+  } catch {}
 }
 
-// Initialize Auth
+// Initialize Auth & Firestore
 const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
 
-export { app, analytics, auth }
+export { app, analytics, auth, db }

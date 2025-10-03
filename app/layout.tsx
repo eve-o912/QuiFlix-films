@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import { Web3Provider } from "@/components/web3-provider"
 import { Header } from "@/components/header"
 import { LayoutWrapper } from "@/components/layout-wrapper"
+import { AuthProvider } from "@/hooks/useAuth"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -25,11 +26,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Web3Provider>
-          <Header />
-          <LayoutWrapper>
-            <Suspense fallback={null}>{children}</Suspense>
-          </LayoutWrapper>
-          <Analytics />
+          <AuthProvider>
+            <Header />
+            <LayoutWrapper>
+              <Suspense fallback={null}>{children}</Suspense>
+            </LayoutWrapper>
+            <Analytics />
+          </AuthProvider>
         </Web3Provider>
       </body>
     </html>

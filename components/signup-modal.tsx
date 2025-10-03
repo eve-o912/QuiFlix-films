@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Eye, EyeOff, Mail, Phone, Wallet, CheckCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/hooks/useAuth"
+import { sendEmailVerification } from "firebase/auth"
+import { auth } from "@/firebase/firebase"
 
 interface SignupModalProps {
   open: boolean
@@ -29,6 +32,7 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
   })
   const { toast } = useToast()
   const { signUp, logIn, loading: authLoading } = useAuth()
+  const router = useRouter()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -95,16 +99,19 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
 
     setIsLoading(true)
     try {
-      await signUp(formData.email, formData.password)
+      const user = await signUp(formData.email, formData.password, formData.username)
+
+      // Send email verification
+      await sendEmailVerification(user)
 
       toast({
         title: "Account Created Successfully!",
-        description: "Welcome to QuiFlix! You can now start exploring films.",
+        description: "Please check your email and verify your account to access the dashboard.",
       })
 
       // Call onSuccess callback
       onSuccess?.({ email: formData.email })
-      
+
       // Close modal
       onOpenChange(false)
 
@@ -139,7 +146,7 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
 
     setIsLoading(true)
     try {
-      await logIn(formData.email, formData.password)
+      const user = await logIn(formData.email, formData.password)
 
       toast({
         title: "Welcome Back!",
@@ -148,9 +155,12 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
 
       // Call onSuccess callback
       onSuccess?.({ email: formData.email })
-      
+
       // Close modal
       onOpenChange(false)
+
+      // Redirect to dashboard
+      router.push('/dashboard')
 
     } catch (error) {
       let errorMessage = "Invalid credentials"
@@ -278,7 +288,7 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
                 <Button 
                   onClick={handleSignup} 
                   disabled={isLoading} 
-                  className="w-full"
+                  className="w-full cursor-pointer"
                 >
                   {isLoading ? "Creating Account..." : "Create Account"}
                 </Button>
@@ -342,7 +352,7 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
                 <Button 
                   onClick={handleLogin} 
                   disabled={isLoading} 
-                  className="w-full"
+                  className="w-full cursor-pointer"
                 >
                   {isLoading ? "Signing In..." : "Sign In"}
                 </Button>

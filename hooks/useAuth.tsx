@@ -8,14 +8,17 @@ import {
     signInWithEmailAndPassword, 
     userSignOut 
 } from "@/firebase/auth";
+import { getUserProfile, UserProfile } from "@/firebase/userProfile";
 
 interface AuthContextType {
   currentUser: User | null;
+  userProfile: UserProfile | null;
   userLoggedIn: boolean;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, username?: string) => Promise<User>;
   logIn: (email: string, password: string) => Promise<User>;
   logOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -26,11 +29,13 @@ export function useAuth() {
         // During SSR or if not wrapped in AuthProvider, return default values
         return {
             currentUser: null,
+            userProfile: null,
             userLoggedIn: false,
             loading: true,
             signUp: async () => { throw new Error('useAuth must be used within an AuthProvider'); },
             logIn: async () => { throw new Error('useAuth must be used within an AuthProvider'); },
-            logOut: async () => { throw new Error('useAuth must be used within an AuthProvider'); }
+            logOut: async () => { throw new Error('useAuth must be used within an AuthProvider'); },
+            refreshProfile: async () => { throw new Error('useAuth must be used within an AuthProvider'); }
         };
     }
     return context;
@@ -42,6 +47,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps){
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [userLoggedIn, setUserLoggedIn] = useState(false);
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
@@ -56,36 +62,68 @@ export function AuthProvider({ children }: AuthProviderProps){
         if (user) {
             setCurrentUser({...user});
             setUserLoggedIn(true);
+            
+            // Fetch user profile from Firestore
+            try {
+                const profile = await getUserProfile(user.uid);
+                setUserProfile(profile);
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+                setUserProfile(null);
+            }
         } else {
             setCurrentUser(null);
+            setUserProfile(null);
             setUserLoggedIn(false);
         }
         setLoading(false);
     }
 
-    const signUp = async (email: string, password: string): Promise<User> => {
-        const userCredential = await createAccountWithEmailAndPassword(email, password);
+    const signUp = async (email: string, password: string, username?: string): Promise<User> => {
+        const userCredential = await createAccountWithEmailAndPassword(email, password, username);
+        
+        // Refresh profile after signup
+        await refreshProfile();
+        
         return userCredential.user;
     }
 
     const logIn = async (email: string, password: string): Promise<User> => {
         const userCredential = await signInWithEmailAndPassword(email, password);
+        
+        // Refresh profile after login
+        await refreshProfile();
+        
         return userCredential.user;
     }
 
     const logOut = async (): Promise<void> => {
         setCurrentUser(null);
+        setUserProfile(null);
         setUserLoggedIn(false);
         await userSignOut();
     }
 
+    const refreshProfile = async (): Promise<void> => {
+        if (currentUser) {
+            try {
+                const profile = await getUserProfile(currentUser.uid);
+                setUserProfile(profile);
+            } catch (error) {
+                console.error('Error refreshing user profile:', error);
+            }
+        }
+    }
+
     const value = {
         currentUser,
+        userProfile,
         userLoggedIn, 
         loading,
         signUp,
         logIn,
-        logOut
+        logOut,
+        refreshProfile
     }
 
     // Prevent SSR hydration mismatch by waiting for client mount
@@ -93,11 +131,13 @@ export function AuthProvider({ children }: AuthProviderProps){
         return (
             <AuthContext.Provider value={{
                 currentUser: null,
+                userProfile: null,
                 userLoggedIn: false,
                 loading: true,
                 signUp,
                 logIn,
-                logOut
+                logOut,
+                refreshProfile
             }}>
                 {children}
             </AuthContext.Provider>
