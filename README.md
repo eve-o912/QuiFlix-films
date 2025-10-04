@@ -4,7 +4,9 @@ A decentralized film streaming platform where users can purchase, own, and trade
 
 ## 🎬 Features
 
-- **NFT Film Ownership**: Purchase films as NFTs with blockchain ownership
+- **Hybrid Onchain/Offchain System**: Films stored offchain (IPFS + database) with NFT ownership onchain
+- **Film Approval Workflow**: Admin approval required before films become available for purchase
+- **NFT Film Ownership**: Purchase films as NFTs with blockchain ownership and royalties
 - **Decentralized Storage**: Films stored on IPFS for censorship resistance
 - **Producer Dashboard**: Revenue tracking and analytics for content creators
 - **Secondary Market**: Resell NFTs with automatic royalty distribution
@@ -108,16 +110,18 @@ QuiFlix-films/
 ## 🔧 Smart Contracts
 
 ### QuiFlixNFT Contract
-- ERC-721 NFT standard
-- EIP-2981 royalty support
-- Film metadata storage
-- Purchase and resale functionality
+- ERC-721 NFT standard with EIP-2981 royalty support
+- **Hybrid System**: Films stored offchain, ownership tracked onchain
+- **Approval Workflow**: Films start inactive, require admin approval to activate
+- **Royalty Distribution**: 2.5% creator royalties on primary sales, automatic royalties on secondary sales
+- **Platform Fees**: 1% platform fee on all transactions
+- Purchase and resale functionality with automatic royalty payments
 
 ### QuiFlixContent Contract
-- Content management
-- Revenue distribution
-- View tracking
-- Producer royalty splits
+- Content management and metadata storage
+- Revenue distribution and tracking
+- View tracking and analytics
+- Producer royalty splits and earnings management
 
 ## 📡 API Endpoints
 
@@ -127,10 +131,11 @@ QuiFlix-films/
 
 ### Film Management
 - `GET /api/films` - Get all films
-- `POST /api/films/upload` - Upload new film (producer only)
-- `POST /api/films/purchase` - Purchase film NFT
+- `POST /api/films/upload` - Upload new film (producer only) - creates inactive NFT
+- `POST /api/films/approve` - Approve film for sale (admin only) - activates NFT
+- `POST /api/films/purchase` - Purchase film NFT with royalty distribution
 - `GET /api/films/stream/:tokenId` - Stream film (NFT owner only)
-- `POST /api/films/resell` - Resell NFT
+- `POST /api/films/resell` - Resell NFT with automatic royalty payments
 
 ### Analytics
 - `GET /api/films/analytics/:filmId` - Get film analytics
@@ -174,28 +179,44 @@ npm run build
 npm start
 ```
 
+## 🆕 Recent Updates
+
+### Hybrid Onchain/Offchain System ✅
+- **Film Upload**: Films are uploaded offchain (IPFS + database) but NFTs are minted onchain
+- **Approval Workflow**: All films start inactive and require admin approval before becoming available for purchase
+- **True NFT Ownership**: Purchases actually mint NFTs with proper ownership transfer
+- **Royalty System**: Creators receive 2.5% royalties on primary sales and automatic royalties on secondary sales
+- **Platform Fees**: 1% platform fee collected on all transactions
+
+### Working Features ✅
+- Smart contract compilation and deployment
+- Backend API integration with blockchain
+- Frontend upload flow with file handling
+- Purchase flow with real NFT minting
+- Admin approval system for content moderation
+
 ## 📊 Key Features
 
 ### For Users
 - Browse and discover films
-- Purchase films as NFTs
-- Stream owned content
-- Trade NFTs on secondary market
-- Track viewing history
+- Purchase films as NFTs with true ownership
+- Stream owned content with NFT verification
+- Trade NFTs on secondary market with automatic royalties
+- Track viewing history and NFT collection
 
 ### For Producers
-- Upload films with metadata
-- Set pricing and royalties
-- Track revenue and analytics
-- Manage content library
-- View audience engagement
+- Upload films with metadata (requires approval)
+- Set pricing and royalty preferences
+- Track revenue and analytics from NFT sales
+- Manage content library with approval status
+- View audience engagement and royalty earnings
 
-### For Platform
-- Automated royalty distribution
-- Platform fee collection
-- Content moderation tools
-- Analytics and reporting
-- Revenue optimization
+### For Platform Admins
+- Approve/reject film submissions
+- Automated royalty distribution (2.5% creator, 1% platform)
+- Platform fee collection on all transactions
+- Content moderation and quality control
+- Analytics and reporting dashboard
 
 ## 🧪 Testing
 
@@ -244,11 +265,16 @@ For issues and questions:
 
 ## 🔮 Roadmap
 
-- [ ] Mainnet deployment
+- [x] Hybrid onchain/offchain film upload system
+- [x] Film approval workflow with admin controls
+- [x] NFT minting with royalty distribution
+- [x] Creator royalties on primary and secondary sales
+- [x] Platform fee collection (1% on transactions)
+- [ ] Smart contract deployment to testnet/mainnet
 - [ ] Mobile app development
 - [ ] Advanced analytics dashboard
 - [ ] Social features and reviews
-- [ ] Multi-chain support
+- [ ] Multi-chain support (Lisk, Polygon, etc.)
 - [ ] AI-powered content recommendations
 
 ---
