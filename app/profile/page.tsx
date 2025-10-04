@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { useWeb3 } from '@/hooks/useWeb3'
+import { useCustodialWallet } from '@/hooks/useCustodialWallet'
 import { 
   User, 
   Wallet, 
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { address, isConnected } = useWeb3()
+  const { address, isConnected, balance, formatAddress: formatWalletAddress } = useCustodialWallet()
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -44,9 +44,7 @@ export default function ProfilePage() {
     }
   }
 
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 8)}...${addr.slice(-6)}`
-  }
+  // formatWalletAddress is already provided by the hook
 
   if (!mounted) {
     return (
@@ -124,7 +122,7 @@ export default function ProfilePage() {
                     <label className="text-sm font-medium text-muted-foreground">Address</label>
                     <div className="flex items-center gap-2 mt-1">
                       <code className="text-sm bg-muted px-2 py-1 rounded flex-1">
-                        {formatAddress(address!)}
+                        {formatWalletAddress(address!)}
                       </code>
                       <Button
                         variant="outline"
@@ -148,12 +146,12 @@ export default function ProfilePage() {
                   
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Network</label>
-                    <p className="text-sm mt-1">Hardhat Local Network</p>
+                    <p className="text-sm mt-1">Lisk Sepolia Testnet</p>
                   </div>
-                  
+
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Balance</label>
-                    <p className="text-sm mt-1">~ ETH</p>
+                    <p className="text-sm mt-1">{balance} ETH</p>
                     <p className="text-xs text-muted-foreground">Balance updates automatically</p>
                   </div>
                 </CardContent>

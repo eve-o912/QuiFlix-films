@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { CheckoutSuccess } from "@/components/checkout-success"
+import { useCustodialWallet } from "@/hooks/useCustodialWallet"
 
 interface CheckoutModalProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ interface CheckoutModalProps {
 type CheckoutStep = "payment-method" | "stablecoin-selection" | "wallet" | "success"
 
 export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purchaseType = "nft" }: CheckoutModalProps) {
+  const { address, formatAddress, sendTransaction } = useCustodialWallet()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>("payment-method")
   const [selectedStablecoin, setSelectedStablecoin] = useState<"usdt" | "usdc" | null>(null)
   const [orderData, setOrderData] = useState<any>(null)
@@ -44,30 +46,47 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
   }
 
   const handleWalletPayment = async () => {
-    console.log("[v0] Processing", selectedStablecoin?.toUpperCase(), "payment for:", filmTitle)
+    console.log("[v0] Processing", selectedStablecoin?.toUpperCase(), "payment for:", filmTitle, "using custodial wallet:", address)
     setIsProcessing(true)
     try {
-      // Simulate wallet connection and stablecoin payment
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Call backend API to purchase film
+      const response = await fetch('/api/films/purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filmId: filmId,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Purchase failed')
+      }
+
+      const purchaseData = await response.json()
 
       const walletOrderData = {
-        orderId: `${selectedStablecoin?.toUpperCase()}_${Date.now()}`,
+        orderId: `NFT_${purchaseData.purchase.tokenId}_${Date.now()}`,
         filmTitle,
         price,
-        email: "wallet@user.eth", // Would come from wallet
+        email: address,
         paymentMethod: selectedStablecoin,
         purchaseType,
         claimNFT: purchaseType === "nft",
         status: "completed",
-        accessToken: `ACCESS_${Date.now()}`,
-        claimVoucher: purchaseType === "direct" ? `VOUCHER_${Date.now()}` : null,
+        accessToken: `ACCESS_${purchaseData.purchase.tokenId}`,
+        claimVoucher: purchaseType === "direct" ? `VOUCHER_${purchaseData.purchase.tokenId}` : null,
+        walletAddress: address,
+        tokenId: purchaseData.purchase.tokenId,
+        txHash: purchaseData.purchase.txHash,
       }
 
-      console.log("[v0] Stablecoin payment completed:", walletOrderData)
+      console.log("[v0] Custodial wallet payment completed:", walletOrderData)
       setOrderData(walletOrderData)
       setCurrentStep("success")
     } catch (error) {
-      console.error("[v0] Stablecoin payment failed:", error)
+      console.error("[v0] Custodial wallet payment failed:", error)
     } finally {
       setIsProcessing(false)
     }
@@ -180,11 +199,15 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
               </Button>
 
               <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium mb-2">Connect Your Wallet</h4>
+                <h4 className="font-medium mb-2">Custodial Wallet Payment</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Connect your wallet to pay with {selectedStablecoin.toUpperCase()} and{" "}
+                  Your custodial wallet will be used to pay with {selectedStablecoin.toUpperCase()} and{" "}
                   {purchaseType === "nft" ? "own this NFT ticket instantly" : "get streaming access"}.
                 </p>
+                <div className="mb-4 p-3 bg-background rounded border">
+                  <div className="text-xs text-muted-foreground mb-1">Your Wallet</div>
+                  <div className="font-mono text-sm">{formatAddress(address!)}</div>
+                </div>
                 <div className="flex items-center gap-2 mb-4 p-3 bg-background rounded border">
                   <DollarSign
                     className={`h-4 w-4 ${selectedStablecoin === "usdt" ? "text-green-500" : "text-blue-500"}`}
@@ -198,7 +221,7 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
                   disabled={isProcessing}
                   className="w-full bg-primary hover:bg-primary/90"
                 >
-                  {isProcessing ? "Processing..." : `Connect Wallet & Pay with ${selectedStablecoin.toUpperCase()}`}
+                  {isProcessing ? "Processing..." : `Pay with ${selectedStablecoin.toUpperCase()}`}
                 </Button>
               </div>
             </div>

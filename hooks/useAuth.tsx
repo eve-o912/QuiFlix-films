@@ -13,7 +13,7 @@ interface AuthContextType {
   currentUser: User | null;
   userLoggedIn: boolean;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, username?: string) => Promise<User>;
   logIn: (email: string, password: string) => Promise<User>;
   logOut: () => Promise<void>;
 }
@@ -63,8 +63,8 @@ export function AuthProvider({ children }: AuthProviderProps){
         setLoading(false);
     }
 
-    const signUp = async (email: string, password: string): Promise<User> => {
-        const userCredential = await createAccountWithEmailAndPassword(email, password);
+    const signUp = async (email: string, password: string, username?: string): Promise<User> => {
+        const userCredential = await createAccountWithEmailAndPassword(email, password, username);
         return userCredential.user;
     }
 

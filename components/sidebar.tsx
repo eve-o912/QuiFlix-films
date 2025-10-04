@@ -20,18 +20,13 @@ import {
 
 const sidebarLinks = [
   {
-    title: "Home",
-    href: "/",
-    icon: Home,
-  },
-  {
     title: "Films",
     href: "/films",
     icon: Film,
   },
   {
     title: "My Account",
-    href: "/account",
+    href: "/dashboard",
     icon: User,
   },
   {

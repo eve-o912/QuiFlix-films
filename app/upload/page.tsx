@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Header } from '@/components/header'
-import { useWeb3 } from '@/hooks/useWeb3'
+import { useCustodialWallet } from '@/hooks/useCustodialWallet'
+import { useAuth } from '@/hooks/useAuth'
+import { db } from '@/firebase/firebase'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import { 
   Upload, 
@@ -29,7 +32,8 @@ import {
 import { useToast } from '@/components/ui/use-toast'
 
 export default function UploadFilmPage() {
-  const { isConnected, address } = useWeb3()
+  const { address, isConnected, formatAddress } = useCustodialWallet()
+  const { currentUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   
@@ -59,8 +63,8 @@ export default function UploadFilmPage() {
     script: null as File | null
   })
 
-  // Redirect if wallet not connected
-  if (!isConnected) {
+  // Redirect if not authenticated
+  if (!currentUser) {
     router.push('/films')
     return null
   }
@@ -87,20 +91,70 @@ export default function UploadFilmPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsUploading(true)
-    
-    // Simulate upload progress
-    for (let i = 0; i <= 100; i += 10) {
-      setUploadProgress(i)
-      await new Promise(resolve => setTimeout(resolve, 200))
+
+    try {
+      // Validate required fields
+      if (!formData.title || !formData.description || !formData.genre || !formData.duration || !formData.price || !uploadedFiles.fullFilm) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields and upload your film file",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Create FormData for file upload
+      const formDataToSend = new FormData()
+      formDataToSend.append('title', formData.title)
+      formDataToSend.append('description', formData.description)
+      formDataToSend.append('genre', formData.genre)
+      formDataToSend.append('duration', formData.duration)
+      formDataToSend.append('releaseDate', formData.releaseDate || new Date().toISOString().split('T')[0])
+      formDataToSend.append('price', formData.price)
+      formDataToSend.append('filmFile', uploadedFiles.fullFilm)
+
+      if (uploadedFiles.poster) {
+        formDataToSend.append('thumbnailFile', uploadedFiles.poster)
+      }
+
+      // Simulate upload progress
+      for (let i = 0; i <= 90; i += 10) {
+        setUploadProgress(i)
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
+
+      // Upload to backend API
+      const response = await fetch('/api/films/upload', {
+        method: 'POST',
+        body: formDataToSend,
+      })
+
+      if (!response.ok) {
+        throw new Error('Upload failed')
+      }
+
+      const result = await response.json()
+
+      // Complete progress
+      setUploadProgress(100)
+
+      toast({
+        title: "Film Submitted Successfully!",
+        description: "Your film has been uploaded and is now under review.",
+      })
+
+      router.push('/films')
+    } catch (error) {
+      console.error('Error uploading film:', error)
+      toast({
+        title: "Upload Failed",
+        description: "There was an error uploading your film. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
     }
-    
-    toast({
-      title: "Film Submitted Successfully!",
-      description: "Your film has been uploaded and is now under review.",
-    })
-    
-    setIsUploading(false)
-    router.push('/films')
   }
 
   const genres = [

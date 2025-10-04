@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { FilmCard } from "@/components/film-card"
 import { CheckoutModal } from "@/components/checkout-modal"
@@ -9,108 +9,24 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Search, Grid, List } from "lucide-react"
+import { db } from "@/firebase/firebase"
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
+import { useAuth } from "@/hooks/useAuth"
 
-const allFilms = [
-  {
-    id: "1",
-    title: "Quantum Horizons",
-    year: 2024,
-    genre: "Sci-Fi",
-    rating: 8.9,
-    price: "0.05 ETH",
-    poster: "/futuristic-sci-fi-movie-poster.jpg",
-    owned: false,
-    description: "A mind-bending journey through parallel dimensions",
-  },
-  {
-    id: "2",
-    title: "The Last Symphony",
-    year: 2024,
-    genre: "Drama",
-    rating: 9.2,
-    price: "0.03 ETH",
-    poster: "/dramatic-music-movie-poster.jpg",
-    owned: true,
-    description: "A maestro's final performance that changes everything",
-  },
-  {
-    id: "3",
-    title: "Digital Rebellion",
-    year: 2024,
-    genre: "Action",
-    rating: 8.7,
-    price: "0.04 ETH",
-    poster: "/cyberpunk-action-movie-poster.jpg",
-    owned: false,
-    description: "Hackers fight against corporate tyranny in 2087",
-  },
-  {
-    id: "4",
-    title: "Neon Dreams",
-    year: 2024,
-    genre: "Thriller",
-    rating: 8.5,
-    price: "0.02 ETH",
-    poster: "/neon-noir-thriller-poster.jpg",
-    owned: false,
-    description: "A detective's pursuit through neon-lit streets",
-  },
-  {
-    id: "5",
-    title: "Ocean's Edge",
-    year: 2024,
-    genre: "Adventure",
-    rating: 8.8,
-    price: "0.03 ETH",
-    poster: "/ocean-adventure-movie-poster.jpg",
-    owned: false,
-    description: "Deep sea exploration reveals ancient secrets",
-  },
-  {
-    id: "6",
-    title: "Mind Palace",
-    year: 2024,
-    genre: "Mystery",
-    rating: 9.0,
-    price: "0.04 ETH",
-    poster: "/psychological-mystery-movie-poster.jpg",
-    owned: false,
-    description: "A psychologist's memories hold the key to murder",
-  },
-  {
-    id: "7",
-    title: "Stellar Winds",
-    year: 2023,
-    genre: "Sci-Fi",
-    rating: 8.3,
-    price: "0.02 ETH",
-    poster: "/placeholder.svg?key=stellar",
-    owned: false,
-    description: "Space colonists face an unknown threat",
-  },
-  {
-    id: "8",
-    title: "Urban Legends",
-    year: 2023,
-    genre: "Horror",
-    rating: 7.9,
-    price: "0.025 ETH",
-    poster: "/placeholder.svg?key=urban",
-    owned: false,
-    description: "City myths come to life in this chilling tale",
-  },
-  {
-    id: "9",
-    title: "The Heist Protocol",
-    year: 2024,
-    genre: "Action",
-    rating: 8.6,
-    price: "0.035 ETH",
-    poster: "/placeholder.svg?key=heist",
-    owned: false,
-    description: "The perfect crime in a digital world",
-  },
-]
+// Film interface
+interface Film {
+  id: string
+  title: string
+  year?: number
+  genre: string
+  rating?: number
+  price: string
+  poster: string
+  owned: boolean
+  description: string
+  creatorId?: string
+  status?: string
+}
 
 const genres = ["All", "Sci-Fi", "Drama", "Action", "Thriller", "Adventure", "Mystery", "Horror"]
 const sortOptions = [
@@ -121,6 +37,9 @@ const sortOptions = [
 ]
 
 export default function FilmsPage() {
+  const { currentUser } = useAuth()
+  const [films, setFilms] = useState<Film[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGenre, setSelectedGenre] = useState("All")
   const [sortBy, setSortBy] = useState("rating")
@@ -139,20 +58,61 @@ export default function FilmsPage() {
     purchaseType: "nft",
   })
 
-  const filteredFilms = allFilms
-    .filter((film) => {
+  // Fetch films from Firestore
+  useEffect(() => {
+    const fetchFilms = async () => {
+      try {
+        // Only fetch approved films
+        const q = query(
+          collection(db, 'films'),
+          where('status', '==', 'approved'),
+          orderBy('createdAt', 'desc')
+        )
+        const querySnapshot = await getDocs(q)
+        const filmsData: Film[] = []
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data()
+          filmsData.push({
+            id: doc.id,
+            title: data.title,
+            year: data.releaseDate ? new Date(data.releaseDate).getFullYear() : undefined,
+            genre: data.genre,
+            rating: 8.5, // Default rating, could be calculated from reviews
+            price: `${data.price} ETH`,
+            poster: data.posterUrl || "/placeholder.svg",
+            owned: false, // TODO: Check if user owns this NFT
+            description: data.description,
+            creatorId: data.creatorId,
+            status: data.status,
+          })
+        })
+
+        setFilms(filmsData)
+      } catch (error) {
+        console.error('Error fetching films:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFilms()
+  }, [])
+
+  const filteredFilms = films
+    .filter((film: Film) => {
       const matchesSearch =
         film.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         film.genre.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesGenre = selectedGenre === "All" || film.genre === selectedGenre
       return matchesSearch && matchesGenre
     })
-    .sort((a, b) => {
+    .sort((a: Film, b: Film) => {
       switch (sortBy) {
         case "rating":
-          return b.rating - a.rating
+          return (b.rating || 0) - (a.rating || 0)
         case "year":
-          return b.year - a.year
+          return (b.year || 0) - (a.year || 0)
         case "price":
           return Number.parseFloat(a.price) - Number.parseFloat(b.price)
         case "title":
@@ -162,7 +122,7 @@ export default function FilmsPage() {
       }
     })
 
-  const handleBuyNFT = (film: any) => {
+  const handleBuyNFT = (film: Film) => {
     console.log("[v0] NFT purchase initiated for:", film.title)
     setCheckoutModal({
       isOpen: true,
@@ -173,7 +133,7 @@ export default function FilmsPage() {
     })
   }
 
-  const handleBuyDirect = (film: any) => {
+  const handleBuyDirect = (film: Film) => {
     console.log("[v0] Direct purchase initiated for:", film.title)
     setCheckoutModal({
       isOpen: true,
@@ -184,7 +144,7 @@ export default function FilmsPage() {
     })
   }
 
-  const handlePlay = (film: any) => {
+  const handlePlay = (film: Film) => {
     console.log("[v0] Playing film:", film.title)
     // TODO: Navigate to video player with film ID
     window.location.href = `/watch/${film.id}`
@@ -292,8 +252,17 @@ export default function FilmsPage() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🎬</div>
+            <h3 className="text-xl font-semibold mb-2">Loading films...</h3>
+            <p className="text-muted-foreground">Please wait while we fetch the latest content</p>
+          </div>
+        )}
+
         {/* Films Grid/List */}
-        {viewMode === "grid" ? (
+        {!loading && viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredFilms.map((film) => (
               <div 
@@ -328,7 +297,7 @@ export default function FilmsPage() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : !loading && (
           <div className="space-y-3 sm:space-y-4">
             {filteredFilms.map((film) => (
               <div 

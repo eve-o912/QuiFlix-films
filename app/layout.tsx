@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { Web3Provider } from "@/components/web3-provider"
+import { AuthProvider } from "@/hooks/useAuth"
 import { Header } from "@/components/header"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import "./globals.css"
@@ -24,13 +25,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Web3Provider>
-          <Header />
-          <LayoutWrapper>
-            <Suspense fallback={null}>{children}</Suspense>
-          </LayoutWrapper>
-          <Analytics />
-        </Web3Provider>
+        <AuthProvider>
+          <Web3Provider>
+            <Header />
+            <LayoutWrapper>
+              <Suspense fallback={null}>{children}</Suspense>
+            </LayoutWrapper>
+            <Analytics />
+          </Web3Provider>
+        </AuthProvider>
       </body>
     </html>
   )

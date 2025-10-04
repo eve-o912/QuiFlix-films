@@ -47,6 +47,7 @@ contract QuiFlixNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Reen
     
     // Events
     event FilmCreated(uint256 indexed tokenId, address indexed producer, string title, uint256 price);
+    event FilmApproved(uint256 indexed tokenId, address indexed producer, string title);
     event FilmPurchased(uint256 indexed tokenId, address indexed buyer, uint256 price);
     event FilmResold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price);
     event RoyaltyPaid(uint256 indexed tokenId, address indexed recipient, uint256 amount);
@@ -60,7 +61,7 @@ contract QuiFlixNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Reen
     }
     
     /**
-     * @dev Create a new film NFT
+     * @dev Create a new film NFT (anyone can create, but films start inactive)
      * @param _title Film title
      * @param _description Film description
      * @param _genre Film genre
@@ -79,10 +80,10 @@ contract QuiFlixNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Reen
         string memory _ipfsHash,
         uint256 _price,
         string memory _tokenURI
-    ) external onlyOwner returns (uint256) {
+    ) external returns (uint256) {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
-        
+
         films[tokenId] = FilmMetadata({
             title: _title,
             description: _description,
@@ -92,19 +93,32 @@ contract QuiFlixNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Reen
             producer: msg.sender,
             ipfsHash: _ipfsHash,
             price: _price,
-            isActive: true
+            isActive: false // Start inactive, needs approval
         });
-        
+
         producerFilms[msg.sender].push(tokenId);
-        
-        _safeMint(msg.sender, tokenId);
+
+        _safeMint(address(this), tokenId); // Mint to contract initially
         _setTokenURI(tokenId, _tokenURI);
-        
+
         emit FilmCreated(tokenId, msg.sender, _title, _price);
-        
+
         return tokenId;
     }
     
+    /**
+     * @dev Approve a film for sale
+     * @param _tokenId Token ID of the film
+     */
+    function approveFilm(uint256 _tokenId) external onlyOwner {
+        require(_exists(_tokenId), "Film does not exist");
+        require(!films[_tokenId].isActive, "Film is already active");
+
+        films[_tokenId].isActive = true;
+
+        emit FilmApproved(_tokenId, films[_tokenId].producer, films[_tokenId].title);
+    }
+
     /**
      * @dev Purchase a film NFT
      * @param _tokenId Token ID of the film
@@ -112,32 +126,76 @@ contract QuiFlixNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Reen
     function purchaseFilm(uint256 _tokenId) external payable nonReentrant {
         require(_exists(_tokenId), "Film does not exist");
         require(films[_tokenId].isActive, "Film is not active");
+        require(ownerOf(_tokenId) == address(this), "Film not available for purchase");
         require(msg.value >= films[_tokenId].price, "Insufficient payment");
-        
+
         address producer = films[_tokenId].producer;
         uint256 price = films[_tokenId].price;
-        
+
         // Calculate fees
         uint256 platformFee = (price * PLATFORM_FEE_BASIS_POINTS) / 10000;
-        uint256 producerPayment = price - platformFee;
-        
+        uint256 royaltyAmount = (price * ROYALTY_BASIS_POINTS) / 10000;
+        uint256 producerPayment = price - platformFee - royaltyAmount;
+
         // Transfer NFT to buyer
-        _transfer(ownerOf(_tokenId), msg.sender, _tokenId);
-        
+        _transfer(address(this), msg.sender, _tokenId);
+
         // Distribute payments
         if (platformFee > 0) {
             payable(platformFeeRecipient).transfer(platformFee);
         }
+        if (royaltyAmount > 0) {
+            payable(royaltyRecipient).transfer(royaltyAmount);
+        }
         if (producerPayment > 0) {
             payable(producer).transfer(producerPayment);
         }
-        
+
         // Refund excess payment
         if (msg.value > price) {
             payable(msg.sender).transfer(msg.value - price);
         }
-        
+
         emit FilmPurchased(_tokenId, msg.sender, price);
+    }
+
+    /**
+     * @dev Transfer NFT with royalty payment (for secondary sales)
+     * @param _tokenId Token ID
+     * @param _to Recipient address
+     * @param _price Sale price
+     */
+    function transferWithRoyalty(uint256 _tokenId, address _to, uint256 _price) external payable nonReentrant {
+        require(_exists(_tokenId), "Film does not exist");
+        require(ownerOf(_tokenId) == msg.sender, "Not the owner");
+        require(msg.value >= _price, "Insufficient payment");
+
+        address producer = films[_tokenId].producer;
+
+        // Calculate royalty
+        uint256 royaltyAmount = (_price * ROYALTY_BASIS_POINTS) / 10000;
+        uint256 sellerPayment = _price - royaltyAmount;
+
+        // Transfer NFT
+        _transfer(msg.sender, _to, _tokenId);
+
+        // Pay royalty to producer
+        if (royaltyAmount > 0) {
+            payable(producer).transfer(royaltyAmount);
+            emit RoyaltyPaid(_tokenId, producer, royaltyAmount);
+        }
+
+        // Pay seller
+        if (sellerPayment > 0) {
+            payable(msg.sender).transfer(sellerPayment);
+        }
+
+        // Refund excess
+        if (msg.value > _price) {
+            payable(msg.sender).transfer(msg.value - _price);
+        }
+
+        emit FilmResold(_tokenId, msg.sender, _to, _price);
     }
     
     /**

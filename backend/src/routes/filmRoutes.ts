@@ -4,6 +4,7 @@ import {
   purchaseFilm,
   streamFilm,
   resellNFT,
+  approveFilm,
   getFilmAnalytics,
   getProducerRevenue,
   getAllFilms,
@@ -17,6 +18,7 @@ const router = Router();
 router.get('/', getAllFilms);
 router.get('/:id', getFilmById);
 router.post('/upload', uploadMiddleware, uploadFilm);
+router.post('/approve', approveFilm);
 router.post('/purchase', purchaseFilm);
 router.get('/stream/:tokenId', streamFilm);
 router.post('/resell', resellNFT);

@@ -5,7 +5,6 @@ import fs from 'fs';
 import { Film, User, Purchase, View } from '../models';
 import ipfsService from '../services/ipfsService';
 import blockchainService from '../services/blockchainService';
-import { generateSignMessage } from '../middleware/auth';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -94,7 +93,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
     // Upload metadata to IPFS
     const metadataIpfsHash = await ipfsService.uploadMetadata(metadata, `${title.replace(/\s+/g, '_')}_metadata.json`);
 
-    // Create film in database
+    // Create film in database (initially inactive)
     const film = await Film.create({
       title,
       description,
@@ -105,17 +104,27 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       ipfsHash: filmIpfsHash,
       price: price.toString(),
       thumbnailUrl: thumbnailIpfsHash ? ipfsService.getGatewayUrl(thumbnailIpfsHash) : undefined,
-      isActive: true,
+      isActive: false, // Wait for approval
       totalViews: 0,
       totalRevenue: '0'
     });
 
-    // Create content on blockchain
-    const { contentId, txHash } = await blockchainService.createContent(title, filmIpfsHash);
+    // Create NFT on blockchain (starts inactive)
+    const { tokenId, txHash } = await blockchainService.createFilm(
+      title,
+      description,
+      genre,
+      parseInt(duration),
+      Math.floor(new Date(releaseDate).getTime() / 1000),
+      filmIpfsHash,
+      price,
+      metadataIpfsHash
+    );
 
-    // Update film with blockchain data
+    // Update film with NFT data
     await film.update({
-      contractAddress: blockchainService.getContractAddresses().contentContract
+      tokenId,
+      contractAddress: blockchainService.getContractAddresses().nftContract
     });
 
     // Clean up uploaded files
@@ -131,7 +140,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
         title: film.title,
         ipfsHash: filmIpfsHash,
         thumbnailUrl: film.thumbnailUrl,
-        contentId,
+        tokenId,
         txHash,
         metadataIpfsHash
       }
@@ -146,14 +155,14 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 /**
- * Purchase film (handles NFT mint)
+ * Purchase film NFT
  */
 export const purchaseFilm = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { filmId, price } = req.body;
+    const { filmId } = req.body;
 
-    if (!filmId || !price) {
-      return res.status(400).json({ error: 'Missing required fields: filmId, price' });
+    if (!filmId) {
+      return res.status(400).json({ error: 'Missing required field: filmId' });
     }
 
     // Get film from database
@@ -162,45 +171,35 @@ export const purchaseFilm = async (req: AuthenticatedRequest, res: Response) => 
       return res.status(404).json({ error: 'Film not found' });
     }
 
-    if (!film.isActive) {
+    if (!film.isActive || !film.tokenId) {
       return res.status(400).json({ error: 'Film is not available for purchase' });
     }
 
-    // Create NFT on blockchain
-    const { tokenId, txHash } = await blockchainService.createFilm(
-      film.title,
-      film.description,
-      film.genre,
-      film.duration,
-      Math.floor(film.releaseDate.getTime() / 1000),
-      film.ipfsHash,
-      price,
-      `https://api.quiflix.com/metadata/${film.id}`
-    );
-
-    // Update film with NFT data
-    await film.update({
-      tokenId,
-      contractAddress: blockchainService.getContractAddresses().nftContract
-    });
+    // Purchase NFT on blockchain
+    const txHash = await blockchainService.purchaseFilm(film.tokenId, film.price);
 
     // Record purchase in database
     const purchase = await Purchase.create({
       buyerId: req.user!.id,
       filmId: film.id,
-      tokenId,
+      tokenId: film.tokenId,
       transactionHash: txHash,
-      price: price.toString(),
+      price: film.price,
       gasUsed: '0' // Would need to get from transaction receipt
     });
+
+    // Update film revenue
+    const currentRevenue = BigInt(film.totalRevenue || '0');
+    const newRevenue = currentRevenue + BigInt(film.price);
+    await film.update({ totalRevenue: newRevenue.toString() });
 
     res.status(201).json({
       success: true,
       purchase: {
         id: purchase.id,
-        tokenId,
+        tokenId: film.tokenId,
         txHash,
-        price: price.toString()
+        price: film.price
       }
     });
     return;
@@ -447,6 +446,47 @@ export const getAllFilms = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting films:', error);
     res.status(500).json({ error: 'Failed to get films' });
+  }
+};
+
+/**
+ * Approve a film for sale (admin only)
+ */
+export const approveFilm = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { filmId } = req.body;
+
+    if (!filmId) {
+      return res.status(400).json({ error: 'Missing required field: filmId' });
+    }
+
+    // Get film from database
+    const film = await Film.findByPk(filmId);
+    if (!film) {
+      return res.status(404).json({ error: 'Film not found' });
+    }
+
+    if (!film.tokenId) {
+      return res.status(400).json({ error: 'Film has no NFT token' });
+    }
+
+    // Approve film on blockchain
+    const txHash = await blockchainService.approveFilm(film.tokenId);
+
+    // Update film status in database
+    await film.update({ isActive: true });
+
+    res.json({
+      success: true,
+      message: 'Film approved for sale',
+      txHash
+    });
+    return;
+
+  } catch (error) {
+    console.error('Error approving film:', error);
+    res.status(500).json({ error: 'Failed to approve film' });
+    return;
   }
 };
 

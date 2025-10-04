@@ -5,17 +5,18 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
-import { WalletConnect } from "@/components/wallet-connect"
+import { SignupModal } from "@/components/signup-modal"
 import { MobileSidebar } from "@/components/sidebar"
-import { useWeb3 } from "@/hooks/useWeb3"
+import { useAuth } from "@/hooks/useAuth"
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 export function Header() {
-  const { address, isConnected, disconnectWallet } = useWeb3()
+  const { currentUser, userLoggedIn, logOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [copied, setCopied] = useState(false)
+  const [signupModalOpen, setSignupModalOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -26,27 +27,23 @@ export function Header() {
   const isOnFilmsPage = pathname === '/films'
   // Check if we're on the main page (landing page)
   const isMainPage = pathname === '/'
-  // Show sidebar only if user is connected OR not on main page
-  const showSidebar = isConnected || !isMainPage
+  // Show sidebar only if user is logged in OR not on main page
+  const showSidebar = userLoggedIn || !isMainPage
 
-  const copyAddress = async () => {
-    if (address) {
-      await navigator.clipboard.writeText(address)
+  const copyEmail = async () => {
+    if (currentUser?.email) {
+      await navigator.clipboard.writeText(currentUser.email)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
-  }
-
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
 
   const handleProfileClick = () => {
     router.push('/profile')
   }
 
-  const handleDisconnect = () => {
-    disconnectWallet()
+  const handleLogout = async () => {
+    await logOut()
   }
 
   // Debug function to test if click is working
@@ -106,11 +103,10 @@ export function Header() {
           <span className="font-bold text-xl hidden sm:inline">QuiFlix</span>
         </div>
 
-
         {/* Actions */}
         <div className="flex items-center space-x-3">
-          {/* Upload Film Button - Only show on films page when connected */}
-          {isConnected && isOnFilmsPage && (
+          {/* Upload Film Button - Only show on films page when logged in */}
+          {userLoggedIn && isOnFilmsPage && (
             <Button 
               onClick={handleUploadClick}
               className="flex items-center gap-2 bg-primary hover:bg-primary/90"
@@ -120,9 +116,19 @@ export function Header() {
               <span className="hidden sm:inline">Upload Film</span>
             </Button>
           )}
-          
-          {!isConnected ? (
-            <WalletConnect />
+
+          {!userLoggedIn ? (
+            <>
+              <Button onClick={() => setSignupModalOpen(true)} className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Sign In / Sign Up
+              </Button>
+              <SignupModal
+                open={signupModalOpen}
+                onOpenChange={setSignupModalOpen}
+                onSuccess={() => router.push('/dashboard')}
+              />
+            </>
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger 
@@ -139,10 +145,10 @@ export function Header() {
                 sideOffset={5}
               >
                 <div className="px-2 py-1.5 text-sm text-muted-foreground border-b">
-                  Connected Wallet
+                  Signed in as {currentUser?.email}
                 </div>
                 <DropdownMenuItem 
-                  onClick={copyAddress} 
+                  onClick={copyEmail} 
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   {copied ? (
@@ -150,7 +156,7 @@ export function Header() {
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
-                  <span className="flex-1 font-mono text-sm">{formatAddress(address!)}</span>
+                  <span className="flex-1 font-mono text-sm">{currentUser?.email}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
@@ -177,11 +183,11 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={handleDisconnect} 
+                  onClick={handleLogout} 
                   className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
                 >
                   <LogOut className="h-4 w-4" />
-                  Disconnect
+                  Log Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

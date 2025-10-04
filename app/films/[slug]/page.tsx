@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Header } from "@/components/header"
 import { CheckoutModal } from "@/components/checkout-modal"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -102,7 +101,7 @@ export default function FilmDetailPage({ params }: { params: { slug: string } })
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+     
 
       {/* Hero Section */}
       <div className="relative h-[60vh] overflow-hidden">

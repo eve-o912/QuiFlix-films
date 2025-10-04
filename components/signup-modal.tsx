@@ -95,7 +95,7 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
 
     setIsLoading(true)
     try {
-      await signUp(formData.email, formData.password)
+      await signUp(formData.email, formData.password, formData.username)
 
       toast({
         title: "Account Created Successfully!",
@@ -103,8 +103,8 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
       })
 
       // Call onSuccess callback
-      onSuccess?.({ email: formData.email })
-      
+      onSuccess?.({ email: formData.email, username: formData.username })
+
       // Close modal
       onOpenChange(false)
 

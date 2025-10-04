@@ -1,6 +1,6 @@
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createWalletClient, http, WalletClient, createPublicClient } from 'viem';
-import { hardhat } from 'viem/chains';
+import { liskSepolia } from './chains';
 
 export interface CustodialWallet {
   address: string;
@@ -71,8 +71,8 @@ export function createWalletClientFromPrivateKey(privateKey: string): WalletClie
   
   return createWalletClient({
     account,
-    chain: hardhat,
-    transport: http('http://127.0.0.1:8545'),
+    chain: liskSepolia,
+    transport: http(liskSepolia.rpcUrls.default.http[0]),
   });
 }
 
@@ -94,8 +94,8 @@ export function createStoredWallet(email: string): StoredWallet {
  */
 export async function getWalletBalance(address: string): Promise<string> {
   const publicClient = createPublicClient({
-    chain: hardhat,
-    transport: http('http://127.0.0.1:8545'),
+    chain: liskSepolia,
+    transport: http(liskSepolia.rpcUrls.default.http[0]),
   });
   
   try {
@@ -120,7 +120,7 @@ export async function fundWalletWithTestETH(address: string, amount: string = '1
     
     const hash = await fundingClient.sendTransaction({
       account: fundingClient.account!,
-      chain: hardhat,
+      chain: liskSepolia,
       to: address as `0x${string}`,
       value: amountInWei,
     });

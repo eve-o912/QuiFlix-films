@@ -28,19 +28,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 // Mock user data - in real app this would come from API
-const mockUserData = {
-  id: "1",
-  username: "MovieLover2024",
-  email: "user@example.com",
-  walletAddress: "0x1234567890123456789012345678901234567890",
-  fiatBalance: 0,
-  tokenBalance: 0,
-  nftCollection: [],
-  joinDate: "2024-10-02",
-  watchTime: 0,
-  level: 1,
-  xp: 0
-}
 
 const quickActions = [
   {
@@ -48,28 +35,28 @@ const quickActions = [
     description: "Discover amazing content",
     icon: <Film className="h-6 w-6" />,
     href: "/films",
-    color: "bg-blue-500"
+    color: "bg-gray-800"
   },
   {
     title: "Add Funds",
     description: "Top up your wallet",
     icon: <Plus className="h-6 w-6" />,
     href: "/account?tab=wallet",
-    color: "bg-green-500"
+    color: "bg-gray-800"
   },
   {
     title: "Watch & Earn",
     description: "Start earning rewards",
     icon: <PlayCircle className="h-6 w-6" />,
     href: "/films",
-    color: "bg-purple-500"
+    color: "bg-gray-800"
   },
   {
     title: "Claim NFTs",
     description: "Convert purchases to NFTs",
     icon: <Gift className="h-6 w-6" />,
     href: "/claim",
-    color: "bg-orange-500"
+    color: "bg-gray-800"
   }
 ]
 
@@ -166,7 +153,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <Wallet className="h-8 w-8 text-green-500" />
+                  <Wallet className="h-8 w-8 text-gray-100" />
                 </div>
                 <div className="text-2xl font-bold">KES 0</div>
                 <p className="text-sm text-muted-foreground">Fiat Balance</p>
@@ -176,7 +163,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <Film className="h-8 w-8 text-blue-500" />
+                  <Film className="h-8 w-8 text-gray-100" />
                 </div>
                 <div className="text-2xl font-bold">0</div>
                 <p className="text-sm text-muted-foreground">NFTs Owned</p>
@@ -186,7 +173,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <Clock className="h-8 w-8 text-purple-500" />
+                  <Clock className="h-8 w-8 text-gray-100" />
                 </div>
                 <div className="text-2xl font-bold">0h</div>
                 <p className="text-sm text-muted-foreground">Watch Time</p>
@@ -196,7 +183,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <Trophy className="h-8 w-8 text-yellow-500" />
+                  <Trophy className="h-8 w-8 text-gray-100" />
                 </div>
                 <div className="text-2xl font-bold">Level 1</div>
                 <p className="text-sm text-muted-foreground">Cinephile Level</p>
@@ -241,57 +228,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Trending Films */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Trending Now
-                  </CardTitle>
-                  <CardDescription>
-                    Popular films in the QuiFlix community
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {trendingFilms.map((film) => (
-                      <Link key={film.id} href={`/films/${film.id}`}>
-                        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                          <div className="relative">
-                            <img
-                              src={film.poster}
-                              alt={film.title}
-                              className="w-full h-40 object-cover rounded-t-lg"
-                            />
-                            <div className="absolute top-2 right-2 flex gap-1">
-                              {film.isNew && (
-                                <Badge className="bg-green-500">NEW</Badge>
-                              )}
-                              {film.isHot && (
-                                <Badge className="bg-red-500">HOT</Badge>
-                              )}
-                              {film.isTrending && (
-                                <Badge className="bg-blue-500">TRENDING</Badge>
-                              )}
-                            </div>
-                          </div>
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold truncate">{film.title}</h4>
-                            <p className="text-sm text-muted-foreground">{film.genre}</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="font-medium">{film.price}</span>
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                                <span className="text-sm">{film.rating}</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+
             </div>
 
             {/* Sidebar */}
@@ -323,45 +260,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Progress Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    Your Progress
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Level 1</span>
-                      <span>0 XP</span>
-                    </div>
-                    <Progress value={0} className="h-2" />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      1000 XP to next level
-                    </p>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Films Watched</span>
-                      <span className="font-medium">0</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Total Watch Time</span>
-                      <span className="font-medium">0h</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">NFTs Owned</span>
-                      <span className="font-medium">0</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
+              
               {/* Tutorial Button */}
               <Card>
                 <CardContent className="p-4 text-center">
