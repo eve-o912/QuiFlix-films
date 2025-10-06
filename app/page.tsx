@@ -17,7 +17,7 @@ export default function LandingPage() {
     return (
         <PageLayout fullWidth>
             {/* Hero Section with background image */}
-            <section className="relative w-full flex flex-col items-center justify-center min-h-screen h-screen overflow-hidden">
+            <section className="relative w-full flex flex-col items-center justify-center min-h-[60vh] sm:min-h-[70vh] md:min-h-screen h-[60vh] sm:h-[70vh] md:h-screen overflow-hidden">
                 <Image
                     src="/cinematic-movie-theater-with-neon-lights.jpg"
                     alt="Hero Background"
@@ -26,19 +26,18 @@ export default function LandingPage() {
                     priority
                 />
                 {/* Centered hero content */}
-                <div className="relative z-10 flex flex-col items-center justify-center px-4 py-20">
-                    <h1 className="text-5xl md:text-6xl font-bold mb-4 text-balance text-center">
+                <div className="relative z-10 flex flex-col items-center justify-center px-4 py-10 sm:py-16 md:py-20">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-balance text-center">
                         Own Your Movie
                         <span className="text-primary block">Experience</span>
                     </h1>
-                    <p className="text-base md:text-lg text-muted-foreground mb-8 max-w-2xl mx-auto text-balance text-center">
+                    <p className="text-sm sm:text-base md:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto text-balance text-center">
                         Stream premium films and own NFT tickets. No wallet? No problem. Buy directly and claim your NFT anytime.
                     </p>
-                    
-                            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-3 shadow-lg" onClick={() => { window.location.href = '/films'; }}>
-                                Get Started
-                            </Button>
 
+                    <Button size="lg" className="bg-primary hover:bg-primary/90 text-base sm:text-lg px-6 sm:px-8 py-2 sm:py-3 shadow-lg" onClick={() => { window.location.href = '/films'; }}>
+                        Get Started
+                    </Button>
                 </div>
             </section>
 

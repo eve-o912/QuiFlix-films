@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Header } from '@/components/header'
 import { useCustodialWallet } from '@/hooks/useCustodialWallet'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/firebase/firebase'
@@ -32,7 +31,7 @@ import {
 import { useToast } from '@/components/ui/use-toast'
 
 export default function UploadFilmPage() {
-  const { address, isConnected, formatAddress } = useCustodialWallet()
+  const { address, isConnected, formatAddress, walletClient } = useCustodialWallet()
   const { currentUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -135,6 +134,50 @@ export default function UploadFilmPage() {
 
       const result = await response.json()
 
+      // After successful upload to backend, send blockchain transaction to register content
+      if (isConnected && walletClient && address) {
+        try {
+          // Example: call createContent on QuiFlixContent contract
+          // You need to replace contractAddress and abi with actual values
+          const contractAddress = process.env.NEXT_PUBLIC_QUIFLIX_CONTENT_ADDRESS as `0x${string}`;
+          const contractAbi = [
+            {
+              "inputs": [
+                { "internalType": "string", "name": "_title", "type": "string" },
+                { "internalType": "string", "name": "_ipfsHash", "type": "string" }
+              ],
+              "name": "createContent",
+              "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            }
+          ];
+
+          const ipfsHash = result.ipfsHash || ""; // Assuming backend returns IPFS hash of uploaded film
+
+          const txHash = await walletClient.writeContract({
+            account: walletClient.account!,
+            chain: walletClient.chain,
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: 'createContent',
+            args: [formData.title, ipfsHash],
+          });
+
+          toast({
+            title: "Film Registered On-Chain!",
+            description: `Transaction hash: ${txHash}`,
+          });
+        } catch (error) {
+          console.error('Blockchain transaction failed:', error);
+          toast({
+            title: "Blockchain Transaction Failed",
+            description: "Failed to register film on blockchain.",
+            variant: "destructive",
+          });
+        }
+      }
+
       // Complete progress
       setUploadProgress(100)
 
@@ -166,7 +209,7 @@ export default function UploadFilmPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+   
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">

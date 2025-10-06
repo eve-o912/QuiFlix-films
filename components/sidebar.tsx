@@ -35,8 +35,8 @@ const sidebarLinks = [
     icon: Gift,
   },
   {
-    title: "Profile",
-    href: "/profile",
+    title: "Dashboard",
+    href: "/dashboard",
     icon: User,
   },
   {

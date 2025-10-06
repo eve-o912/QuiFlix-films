@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Header } from "@/components/header"
-import { FilmCard } from "@/components/film-card"
 import { CheckoutModal } from "@/components/checkout-modal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -152,24 +150,22 @@ export default function FilmsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-     
-
-      <div className="container px-4 py-8">
+      <div className="container px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
         {/* Page Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2">Browse Films</h1>
-          <p className="text-muted-foreground text-lg">Discover premium films and own your viewing experience</p>
+        <div className="mb-6 sm:mb-8 text-center">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Browse Films</h1>
+          <p className="text-muted-foreground text-sm sm:text-base md:text-lg">Discover premium films and own your viewing experience</p>
         </div>
 
         {/* Search Bar - Centered */}
-        <div className="py-8 mb-6 flex justify-center">
-          <div className="relative w-full max-w-2xl">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+        <div className="py-4 sm:py-6 md:py-8 mb-4 sm:mb-6 flex justify-center">
+          <div className="relative w-full max-w-2xl px-2 sm:px-0">
+            <Search className="absolute left-4 sm:left-6 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
             <Input
               placeholder="Search films, genres..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-4 py-3 rounded-3xl text-center placeholder:text-center border-2 focus:border-primary"
+              className="pl-10 sm:pl-12 pr-4 py-2 sm:py-3 rounded-3xl text-center placeholder:text-center border-2 focus:border-primary text-sm sm:text-base"
             />
           </div>
         </div>
