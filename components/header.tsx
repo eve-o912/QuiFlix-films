@@ -8,11 +8,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { SignupModal } from "@/components/signup-modal"
 import { MobileSidebar } from "@/components/sidebar"
 import { useAuth } from "@/hooks/useAuth"
+import { useCustodialWallet } from "@/hooks/useCustodialWallet"
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 export function Header() {
   const { currentUser, userLoggedIn, logOut } = useAuth()
+  const { address, formatAddress } = useCustodialWallet()
   const router = useRouter()
   const pathname = usePathname()
   const [copied, setCopied] = useState(false)
@@ -29,14 +31,6 @@ export function Header() {
   const isMainPage = pathname === '/'
   // Show sidebar only if user is logged in OR not on main page
   const showSidebar = userLoggedIn || !isMainPage
-
-  const copyEmail = async () => {
-    if (currentUser?.email) {
-      await navigator.clipboard.writeText(currentUser.email)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
 
   const handleProfileClick = () => {
     router.push('/profile')
@@ -85,7 +79,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
+      <div className="container flex h-16 items-center justify-between px-2 sm:px-4 md:px-6">
         {/* Mobile Sidebar + Logo */}
         <div className="flex items-center space-x-2">
           {showSidebar && (
@@ -145,10 +139,16 @@ export function Header() {
                 sideOffset={5}
               >
                 <div className="px-2 py-1.5 text-sm text-muted-foreground border-b">
-                  Signed in as {currentUser?.email}
+                  Wallet: {formatAddress(address)}
                 </div>
                 <DropdownMenuItem 
-                  onClick={copyEmail} 
+                  onClick={async () => {
+                    if (address) {
+                      await navigator.clipboard.writeText(address);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }
+                  }} 
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   {copied ? (
@@ -156,7 +156,7 @@ export function Header() {
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
-                  <span className="flex-1 font-mono text-sm">{currentUser?.email}</span>
+                  <span className="flex-1 font-mono text-sm">{formatAddress(address)}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
@@ -166,10 +166,6 @@ export function Header() {
                   <User className="h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
-                  <Film className="h-4 w-4" />
-                  My NFTs
-                </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={handleUploadClick}
                   className="flex items-center gap-2 cursor-pointer"
@@ -177,7 +173,7 @@ export function Header() {
                   <Upload className="h-4 w-4" />
                   Upload Film
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/settings')}>
                   <Settings className="h-4 w-4" />
                   Settings
                 </DropdownMenuItem>

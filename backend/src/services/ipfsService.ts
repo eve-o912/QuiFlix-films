@@ -1,9 +1,9 @@
-import { create, IPFSHTTPClient } from 'ipfs-http-client';
+import { create } from 'ipfs-http-client';
 import fs from 'fs';
 import path from 'path';
 
 class IPFSService {
-  private client: IPFSHTTPClient;
+  private client: any;
   private gatewayUrl: string;
 
   constructor() {

@@ -15,34 +15,35 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  LayoutDashboard
 } from "lucide-react"
 
 const sidebarLinks = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
   {
     title: "Films",
     href: "/films",
     icon: Film,
   },
   {
-    title: "My Account",
-    href: "/dashboard",
-    icon: User,
-  },
-  {
     title: "Claim Films",
     href: "/claim",
     icon: Gift,
-  },
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: User,
-  },
+  }, 
   {
     title: "Upload",
     href: "/upload",
     icon: Upload,
+  },
+  {
+    title: "Profile",
+    href: "/profile",
+    icon: User,
   },
 ]
 

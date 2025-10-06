@@ -109,23 +109,8 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       totalRevenue: '0'
     });
 
-    // Create NFT on blockchain (starts inactive)
-    const { tokenId, txHash } = await blockchainService.createFilm(
-      title,
-      description,
-      genre,
-      parseInt(duration),
-      Math.floor(new Date(releaseDate).getTime() / 1000),
-      filmIpfsHash,
-      price,
-      metadataIpfsHash
-    );
-
-    // Update film with NFT data
-    await film.update({
-      tokenId,
-      contractAddress: blockchainService.getContractAddresses().nftContract
-    });
+    // Note: Blockchain transaction will be done on frontend using custodial wallet
+    // For now, store the metadata IPFS hash
 
     // Clean up uploaded files
     fs.unlinkSync(filmFile.path);
@@ -140,8 +125,6 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
         title: film.title,
         ipfsHash: filmIpfsHash,
         thumbnailUrl: film.thumbnailUrl,
-        tokenId,
-        txHash,
         metadataIpfsHash
       }
     });
