@@ -12,12 +12,16 @@ class BlockchainService {
         this.wallet = new ethers_1.ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
         const nftABI = [
             "function createFilm(string memory _title, string memory _description, string memory _genre, uint256 _duration, uint256 _releaseDate, string memory _ipfsHash, uint256 _price, string memory _tokenURI) external returns (uint256)",
+            "function approveFilm(uint256 _tokenId) external",
             "function purchaseFilm(uint256 _tokenId) external payable",
+            "function transferWithRoyalty(uint256 _tokenId, address _to, uint256 _price) external payable",
             "function ownerOf(uint256 tokenId) external view returns (address)",
             "function getFilmMetadata(uint256 _tokenId) external view returns (tuple(string title, string description, string genre, uint256 duration, uint256 releaseDate, address producer, string ipfsHash, uint256 price, bool isActive))",
             "function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view returns (address, uint256)",
             "event FilmCreated(uint256 indexed tokenId, address indexed producer, string title, uint256 price)",
-            "event FilmPurchased(uint256 indexed tokenId, address indexed buyer, uint256 price)"
+            "event FilmApproved(uint256 indexed tokenId, address indexed producer, string title)",
+            "event FilmPurchased(uint256 indexed tokenId, address indexed buyer, uint256 price)",
+            "event RoyaltyPaid(uint256 indexed tokenId, address indexed recipient, uint256 amount)"
         ];
         const contentABI = [
             "function createContent(string memory _title, string memory _ipfsHash) external returns (uint256)",
@@ -58,6 +62,17 @@ class BlockchainService {
             throw new Error('Failed to create film on blockchain');
         }
     }
+    async approveFilm(tokenId) {
+        try {
+            const tx = await this.nftContract.approveFilm(tokenId);
+            await tx.wait();
+            return tx.hash;
+        }
+        catch (error) {
+            console.error('Error approving film:', error);
+            throw new Error('Failed to approve film');
+        }
+    }
     async purchaseFilm(tokenId, price) {
         try {
             const tx = await this.nftContract.purchaseFilm(tokenId, {
@@ -69,6 +84,19 @@ class BlockchainService {
         catch (error) {
             console.error('Error purchasing film:', error);
             throw new Error('Failed to purchase film');
+        }
+    }
+    async transferWithRoyalty(tokenId, to, price) {
+        try {
+            const tx = await this.nftContract.transferWithRoyalty(tokenId, to, ethers_1.ethers.parseEther(price), {
+                value: ethers_1.ethers.parseEther(price)
+            });
+            await tx.wait();
+            return tx.hash;
+        }
+        catch (error) {
+            console.error('Error transferring NFT with royalty:', error);
+            throw new Error('Failed to transfer NFT with royalty');
         }
     }
     async getFilmMetadata(tokenId) {

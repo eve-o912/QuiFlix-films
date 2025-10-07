@@ -8,7 +8,6 @@ import dotenv from 'dotenv';
 
 import filmRoutes from './routes/filmRoutes';
 import userRoutes from './routes/userRoutes';
-import { syncDatabase } from './models';
 
 dotenv.config();
 
@@ -79,21 +78,18 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
 // Initialize database and start server
 const startServer = async () => {
   try {
-    // Sync database
-    await syncDatabase();
-    console.log('Database synchronized successfully');
-    
     const PORT = process.env.PORT || 3001;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
+      console.log(`Health check: http://localhost:${PORT}/health`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

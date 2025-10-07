@@ -13,7 +13,6 @@ const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const filmRoutes_1 = __importDefault(require("./routes/filmRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
-const models_1 = require("./models");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
@@ -67,12 +66,11 @@ app.use('*', (req, res) => {
 });
 const startServer = async () => {
     try {
-        await (0, models_1.syncDatabase)();
-        console.log('Database synchronized successfully');
         const PORT = process.env.PORT || 3001;
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
             console.log(`Environment: ${process.env.NODE_ENV}`);
+            console.log(`Health check: http://localhost:${PORT}/health`);
         });
     }
     catch (error) {

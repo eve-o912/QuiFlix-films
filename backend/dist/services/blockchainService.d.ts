@@ -12,7 +12,9 @@ declare class BlockchainService {
         tokenId: number;
         txHash: string;
     }>;
+    approveFilm(tokenId: number): Promise<string>;
     purchaseFilm(tokenId: number, price: string): Promise<string>;
+    transferWithRoyalty(tokenId: number, to: string, price: string): Promise<string>;
     getFilmMetadata(tokenId: number): Promise<any>;
     getNFTOwner(tokenId: number): Promise<string>;
     getRoyaltyInfo(tokenId: number, salePrice: string): Promise<{

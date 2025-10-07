@@ -34,7 +34,7 @@ function simpleHash(input: string): string {
  * This ensures the same email always generates the same wallet
  */
 export function generateWalletFromEmail(email: string): CustodialWallet {
-  const secret = 'quiflix-secret-key-2024'; // In production, use environment variable
+  const secret = process.env.NEXT_PUBLIC_SECRET_SALT; // In production, use environment variable
   const combined = `${email.toLowerCase().trim()}:${secret}`;
   
   // Generate a deterministic hash

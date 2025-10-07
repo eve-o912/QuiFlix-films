@@ -3,13 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getFilmById = exports.getAllFilms = exports.getProducerRevenue = exports.getFilmAnalytics = exports.resellNFT = exports.streamFilm = exports.purchaseFilm = exports.uploadFilm = exports.uploadMiddleware = void 0;
+exports.getFilmById = exports.approveFilm = exports.getAllFilms = exports.getProducerRevenue = exports.getFilmAnalytics = exports.resellNFT = exports.streamFilm = exports.purchaseFilm = exports.uploadFilm = exports.uploadMiddleware = void 0;
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const models_1 = require("../models");
 const ipfsService_1 = __importDefault(require("../services/ipfsService"));
 const blockchainService_1 = __importDefault(require("../services/blockchainService"));
+const films = new Map();
+const purchases = new Map();
+const views = new Map();
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = process.env.UPLOAD_PATH || './uploads';
@@ -72,24 +74,24 @@ const uploadFilm = async (req, res) => {
             uploadedBy: req.user?.walletAddress || req.walletAddress
         };
         const metadataIpfsHash = await ipfsService_1.default.uploadMetadata(metadata, `${title.replace(/\s+/g, '_')}_metadata.json`);
-        const film = await models_1.Film.create({
+        const filmId = Date.now().toString();
+        const film = {
+            id: filmId,
             title,
             description,
             genre,
             duration: parseInt(duration),
-            releaseDate: new Date(releaseDate),
+            releaseDate: new Date(releaseDate).toISOString(),
             producerId: req.user.id,
             ipfsHash: filmIpfsHash,
             price: price.toString(),
             thumbnailUrl: thumbnailIpfsHash ? ipfsService_1.default.getGatewayUrl(thumbnailIpfsHash) : undefined,
-            isActive: true,
+            isActive: false,
             totalViews: 0,
-            totalRevenue: '0'
-        });
-        const { contentId, txHash } = await blockchainService_1.default.createContent(title, filmIpfsHash);
-        await film.update({
-            contractAddress: blockchainService_1.default.getContractAddresses().contentContract
-        });
+            totalRevenue: '0',
+            createdAt: new Date().toISOString()
+        };
+        films.set(filmId, film);
         fs_1.default.unlinkSync(filmFile.path);
         if (thumbnailFile) {
             fs_1.default.unlinkSync(thumbnailFile.path);
@@ -101,8 +103,6 @@ const uploadFilm = async (req, res) => {
                 title: film.title,
                 ipfsHash: filmIpfsHash,
                 thumbnailUrl: film.thumbnailUrl,
-                contentId,
-                txHash,
                 metadataIpfsHash
             }
         });
@@ -117,37 +117,41 @@ const uploadFilm = async (req, res) => {
 exports.uploadFilm = uploadFilm;
 const purchaseFilm = async (req, res) => {
     try {
-        const { filmId, price } = req.body;
-        if (!filmId || !price) {
-            return res.status(400).json({ error: 'Missing required fields: filmId, price' });
+        const { filmId } = req.body;
+        if (!filmId) {
+            return res.status(400).json({ error: 'Missing required field: filmId' });
         }
-        const film = await models_1.Film.findByPk(filmId, { include: [{ model: models_1.User, as: 'producer' }] });
+        const film = films.get(filmId);
         if (!film) {
             return res.status(404).json({ error: 'Film not found' });
         }
-        if (!film.isActive) {
+        if (!film.isActive || !film.tokenId) {
             return res.status(400).json({ error: 'Film is not available for purchase' });
         }
-        const { tokenId, txHash } = await blockchainService_1.default.createFilm(film.title, film.description, film.genre, film.duration, Math.floor(film.releaseDate.getTime() / 1000), film.ipfsHash, price, `https://api.quiflix.com/metadata/${film.id}`);
-        await film.update({
-            tokenId,
-            contractAddress: blockchainService_1.default.getContractAddresses().nftContract
-        });
-        const purchase = await models_1.Purchase.create({
+        const txHash = await blockchainService_1.default.purchaseFilm(film.tokenId, film.price);
+        const purchaseId = Date.now().toString();
+        const purchase = {
+            id: purchaseId,
             buyerId: req.user.id,
             filmId: film.id,
-            tokenId,
+            tokenId: film.tokenId,
             transactionHash: txHash,
-            price: price.toString(),
-            gasUsed: '0'
-        });
+            price: film.price,
+            gasUsed: '0',
+            createdAt: new Date().toISOString()
+        };
+        purchases.set(purchaseId, purchase);
+        const currentRevenue = BigInt(film.totalRevenue || '0');
+        const newRevenue = currentRevenue + BigInt(film.price);
+        film.totalRevenue = newRevenue.toString();
+        films.set(film.id, film);
         res.status(201).json({
             success: true,
             purchase: {
                 id: purchase.id,
-                tokenId,
+                tokenId: film.tokenId,
                 txHash,
-                price: price.toString()
+                price: film.price
             }
         });
         return;
@@ -167,17 +171,22 @@ const streamFilm = async (req, res) => {
         if (owner.toLowerCase() !== userWalletAddress?.toLowerCase()) {
             return res.status(403).json({ error: 'You do not own this NFT' });
         }
-        const film = await models_1.Film.findOne({ where: { tokenId: parseInt(tokenId) } });
+        const film = Array.from(films.values()).find(f => f.tokenId === parseInt(tokenId));
         if (!film) {
             return res.status(404).json({ error: 'Film not found' });
         }
-        await models_1.View.create({
+        const viewId = Date.now().toString();
+        const view = {
+            id: viewId,
             viewerId: req.user.id,
             filmId: film.id,
             duration: 0,
-            completed: false
-        });
-        await film.increment('totalViews');
+            completed: false,
+            createdAt: new Date().toISOString()
+        };
+        views.set(viewId, view);
+        film.totalViews += 1;
+        films.set(film.id, film);
         const streamUrl = ipfsService_1.default.getGatewayUrl(film.ipfsHash);
         res.json({
             success: true,
@@ -209,9 +218,10 @@ const resellNFT = async (req, res) => {
         if (owner.toLowerCase() !== userWalletAddress?.toLowerCase()) {
             return res.status(403).json({ error: 'You do not own this NFT' });
         }
-        const film = await models_1.Film.findOne({ where: { tokenId } });
+        const film = Array.from(films.values()).find(f => f.tokenId === tokenId);
         if (film) {
-            await film.update({ price: newPrice.toString() });
+            film.price = newPrice.toString();
+            films.set(film.id, film);
         }
         res.json({
             success: true,
@@ -231,19 +241,15 @@ exports.resellNFT = resellNFT;
 const getFilmAnalytics = async (req, res) => {
     try {
         const { filmId } = req.params;
-        const film = await models_1.Film.findByPk(filmId, {
-            include: [
-                { model: models_1.User, as: 'producer' },
-                { model: models_1.Purchase, as: 'purchases' },
-                { model: models_1.View, as: 'views' }
-            ]
-        });
+        const film = films.get(filmId);
         if (!film) {
             return res.status(404).json({ error: 'Film not found' });
         }
         if (film.producerId !== req.user?.id) {
             return res.status(403).json({ error: 'Access denied' });
         }
+        const filmPurchases = Array.from(purchases.values()).filter(p => p.filmId === filmId);
+        const filmViews = Array.from(views.values()).filter(v => v.filmId === filmId);
         const analytics = {
             film: {
                 id: film.id,
@@ -251,10 +257,10 @@ const getFilmAnalytics = async (req, res) => {
                 totalViews: film.totalViews,
                 totalRevenue: film.totalRevenue
             },
-            purchases: film.purchases?.length || 0,
-            views: film.views?.length || 0,
-            averageViewDuration: film.views?.reduce((sum, view) => sum + view.duration, 0) / (film.views?.length || 1),
-            completionRate: film.views?.filter((view) => view.completed).length / (film.views?.length || 1)
+            purchases: filmPurchases.length,
+            views: filmViews.length,
+            averageViewDuration: filmViews.reduce((sum, view) => sum + view.duration, 0) / (filmViews.length || 1),
+            completionRate: filmViews.filter(view => view.completed).length / (filmViews.length || 1)
         };
         res.json({
             success: true,
@@ -272,35 +278,31 @@ exports.getFilmAnalytics = getFilmAnalytics;
 const getProducerRevenue = async (req, res) => {
     try {
         const producerId = req.user.id;
-        const films = await models_1.Film.findAll({
-            where: { producerId },
-            include: [
-                { model: models_1.Purchase, as: 'purchases' },
-                { model: models_1.View, as: 'views' }
-            ]
-        });
-        const totalRevenue = films.reduce((sum, film) => {
+        const producerFilms = Array.from(films.values()).filter(f => f.producerId === producerId);
+        const totalRevenue = producerFilms.reduce((sum, film) => {
             return sum + BigInt(film.totalRevenue);
         }, BigInt(0));
-        const totalViews = films.reduce((sum, film) => sum + film.totalViews, 0);
-        const totalPurchases = films.reduce((sum, film) => sum + (film.purchases?.length || 0), 0);
+        const totalViews = producerFilms.reduce((sum, film) => sum + film.totalViews, 0);
+        const totalPurchases = producerFilms.reduce((sum, film) => {
+            return sum + Array.from(purchases.values()).filter(p => p.filmId === film.id).length;
+        }, 0);
         const revenueReport = {
             producer: {
                 id: producerId,
                 walletAddress: req.user.walletAddress
             },
             summary: {
-                totalFilms: films.length,
+                totalFilms: producerFilms.length,
                 totalRevenue: totalRevenue.toString(),
                 totalViews,
                 totalPurchases
             },
-            films: films.map(film => ({
+            films: producerFilms.map(film => ({
                 id: film.id,
                 title: film.title,
                 totalRevenue: film.totalRevenue,
                 totalViews: film.totalViews,
-                purchases: film.purchases?.length || 0
+                purchases: Array.from(purchases.values()).filter(p => p.filmId === film.id).length
             }))
         };
         res.json({
@@ -318,29 +320,41 @@ exports.getProducerRevenue = getProducerRevenue;
 const getAllFilms = async (req, res) => {
     try {
         const { page = 1, limit = 10, genre, producer } = req.query;
-        const where = { isActive: true };
+        let filteredFilms = Array.from(films.values()).filter(f => f.isActive);
         if (genre)
-            where.genre = genre;
+            filteredFilms = filteredFilms.filter(f => f.genre === genre);
         if (producer) {
-            const producerUser = await models_1.User.findOne({ where: { walletAddress: producer } });
-            if (producerUser)
-                where.producerId = producerUser.id;
+            filteredFilms = filteredFilms.filter(f => f.producerId === producer);
         }
-        const films = await models_1.Film.findAndCountAll({
-            where,
-            include: [{ model: models_1.User, as: 'producer', attributes: ['walletAddress', 'username'] }],
-            limit: parseInt(limit),
-            offset: (parseInt(page) - 1) * parseInt(limit),
-            order: [['createdAt', 'DESC']]
-        });
+        const totalCount = filteredFilms.length;
+        const paginatedFilms = filteredFilms
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice((parseInt(page) - 1) * parseInt(limit), (parseInt(page) - 1) * parseInt(limit) + parseInt(limit));
+        const filmsResponse = paginatedFilms.map(film => ({
+            id: film.id,
+            title: film.title,
+            description: film.description,
+            genre: film.genre,
+            duration: film.duration,
+            releaseDate: film.releaseDate,
+            producer: {
+                walletAddress: film.producerId,
+                username: ''
+            },
+            price: film.price,
+            thumbnailUrl: film.thumbnailUrl,
+            totalViews: film.totalViews,
+            totalRevenue: film.totalRevenue,
+            createdAt: film.createdAt
+        }));
         res.json({
             success: true,
-            films: films.rows,
+            films: filmsResponse,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
-                total: films.count,
-                pages: Math.ceil(films.count / parseInt(limit))
+                total: totalCount,
+                pages: Math.ceil(totalCount / parseInt(limit))
             }
         });
     }
@@ -350,18 +364,63 @@ const getAllFilms = async (req, res) => {
     }
 };
 exports.getAllFilms = getAllFilms;
-const getFilmById = async (req, res) => {
+const approveFilm = async (req, res) => {
     try {
-        const { id } = req.params;
-        const film = await models_1.Film.findByPk(id, {
-            include: [{ model: models_1.User, as: 'producer', attributes: ['walletAddress', 'username'] }]
-        });
+        const { filmId } = req.body;
+        if (!filmId) {
+            return res.status(400).json({ error: 'Missing required field: filmId' });
+        }
+        const film = films.get(filmId);
         if (!film) {
             return res.status(404).json({ error: 'Film not found' });
         }
+        if (!film.tokenId) {
+            return res.status(400).json({ error: 'Film has no NFT token' });
+        }
+        const txHash = await blockchainService_1.default.approveFilm(film.tokenId);
+        film.isActive = true;
+        films.set(film.id, film);
         res.json({
             success: true,
-            film
+            message: 'Film approved for sale',
+            txHash
+        });
+        return;
+    }
+    catch (error) {
+        console.error('Error approving film:', error);
+        res.status(500).json({ error: 'Failed to approve film' });
+        return;
+    }
+};
+exports.approveFilm = approveFilm;
+const getFilmById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const film = films.get(id);
+        if (!film) {
+            return res.status(404).json({ error: 'Film not found' });
+        }
+        const filmResponse = {
+            id: film.id,
+            title: film.title,
+            description: film.description,
+            genre: film.genre,
+            duration: film.duration,
+            releaseDate: film.releaseDate,
+            producer: {
+                walletAddress: film.producerId,
+                username: ''
+            },
+            price: film.price,
+            thumbnailUrl: film.thumbnailUrl,
+            totalViews: film.totalViews,
+            totalRevenue: film.totalRevenue,
+            createdAt: film.createdAt
+        };
+        res.json({
+            success: true,
+            film: filmResponse
         });
         return;
     }

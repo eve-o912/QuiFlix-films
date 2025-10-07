@@ -1,14 +1,25 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { User } from '../models';
 import blockchainService from '../services/blockchainService';
 import { generateToken, generateSignMessage } from '../middleware/auth';
+
+// Instead of importing User model, define a simple interface:
+interface User {
+  id: string;
+  email: string;
+  walletAddress?: string;
+  username?: string;
+  isProducer?: boolean;
+  profileImage?: string;
+  createdAt?: string;
+}
 
 interface AuthenticatedRequest extends Request {
   user?: User;
   walletAddress?: string;
 }
+
+// Simple in-memory user storage (replace with Firebase later)
+const users: Map<string, User> = new Map();
 
 /**
  * Register/Login user with wallet signature
@@ -27,18 +38,25 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response)
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    // Find or create user
-    let user = await User.findOne({ where: { walletAddress } });
+    // Find or create user (using in-memory storage for now)
+    let user = users.get(walletAddress);
     
     if (!user) {
-      user = await User.create({
+      user = {
+        id: Date.now().toString(),
+        email: '', // Placeholder email since it's required by the User interface
         walletAddress,
-        isProducer: false
-      });
+        isProducer: false,
+        createdAt: new Date().toISOString()
+      };
+      users.set(walletAddress, user as User);
     }
 
-    // Generate JWT token
-    const token = generateToken(walletAddress, user.id);
+    // Ensure user is defined before generating JWT token
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    const token = generateToken(user.id, walletAddress);
 
     res.json({
       success: true,
@@ -97,28 +115,33 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
 
     // Check if username is already taken
     if (username && username !== user.username) {
-      const existingUser = await User.findOne({ where: { username } });
+      const existingUser = Array.from(users.values()).find(u => u.username === username);
       if (existingUser) {
         return res.status(400).json({ error: 'Username already taken' });
       }
     }
 
-    // Update user
-    await user.update({
+    // Update user in memory storage
+    const updatedUser = {
+      ...user,
       username: username || user.username,
       email: email || user.email,
       profileImage: profileImage || user.profileImage
-    });
+    };
+    
+    if (user.walletAddress) {
+      users.set(user.walletAddress, updatedUser);
+    }
 
     res.json({
       success: true,
       user: {
-        id: user.id,
-        walletAddress: user.walletAddress,
-        username: user.username,
-        email: user.email,
-        isProducer: user.isProducer,
-        profileImage: user.profileImage
+        id: updatedUser.id,
+        walletAddress: updatedUser.walletAddress,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        isProducer: updatedUser.isProducer,
+        profileImage: updatedUser.profileImage
       }
     });
     return;
@@ -141,15 +164,19 @@ export const becomeProducer = async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ error: 'User is already a producer' });
     }
 
-    await user.update({ isProducer: true });
+    // Update user in memory storage
+    const updatedUser = { ...user, isProducer: true };
+    if (user.walletAddress) {
+      users.set(user.walletAddress, updatedUser);
+    }
 
     res.json({
       success: true,
       message: 'Successfully became a producer',
       user: {
-        id: user.id,
-        walletAddress: user.walletAddress,
-        username: user.username,
+        id: updatedUser.id,
+        walletAddress: updatedUser.walletAddress,
+        username: updatedUser.username,
         isProducer: true
       }
     });
@@ -191,32 +218,16 @@ export const getUserPurchases = async (req: AuthenticatedRequest, res: Response)
     const user = req.user!;
     const { page = 1, limit = 10 } = req.query;
 
-    const purchases = await user.getPurchases({
-      include: [
-        {
-          model: require('../models/Film').default,
-          as: 'film',
-          include: [
-            {
-              model: User,
-              as: 'producer',
-              attributes: ['walletAddress', 'username']
-            }
-          ]
-        }
-      ],
-      limit: parseInt(limit as string),
-      offset: (parseInt(page as string) - 1) * parseInt(limit as string),
-      order: [['createdAt', 'DESC']]
-    });
-
+    // Since we removed the database, return empty purchases for now
+    // You can integrate with Firebase to store purchase data
     res.json({
       success: true,
-      purchases,
+      purchases: [],
       pagination: {
         page: parseInt(page as string),
         limit: parseInt(limit as string)
-      }
+      },
+      message: 'Purchase history will be available once Firebase integration is complete'
     });
     return;
 
@@ -234,32 +245,16 @@ export const getUserViews = async (req: AuthenticatedRequest, res: Response) => 
     const user = req.user!;
     const { page = 1, limit = 10 } = req.query;
 
-    const views = await user.getViews({
-      include: [
-        {
-          model: require('../models/Film').default,
-          as: 'film',
-          include: [
-            {
-              model: User,
-              as: 'producer',
-              attributes: ['walletAddress', 'username']
-            }
-          ]
-        }
-      ],
-      limit: parseInt(limit as string),
-      offset: (parseInt(page as string) - 1) * parseInt(limit as string),
-      order: [['createdAt', 'DESC']]
-    });
-
+    // Since we removed the database, return empty views for now
+    // You can integrate with Firebase to store view data
     res.json({
       success: true,
-      views,
+      views: [],
       pagination: {
         page: parseInt(page as string),
         limit: parseInt(limit as string)
-      }
+      },
+      message: 'View history will be available once Firebase integration is complete'
     });
     return;
 
@@ -280,13 +275,12 @@ export const getSignMessage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Wallet address is required' });
     }
 
-    const timestamp = Date.now();
-    const message = generateSignMessage(walletAddress, timestamp);
+    const message = generateSignMessage(walletAddress);
 
     res.json({
       success: true,
       message,
-      timestamp
+      timestamp: Date.now()
     });
     return;
 

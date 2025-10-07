@@ -4,9 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSignMessage = exports.getUserViews = exports.getUserPurchases = exports.getUserNFTs = exports.becomeProducer = exports.updateUserProfile = exports.getUserProfile = exports.authenticateUser = void 0;
-const models_1 = require("../models");
 const blockchainService_1 = __importDefault(require("../services/blockchainService"));
 const auth_1 = require("../middleware/auth");
+const users = new Map();
 const authenticateUser = async (req, res) => {
     try {
         const { walletAddress, signature, message } = req.body;
@@ -17,14 +17,21 @@ const authenticateUser = async (req, res) => {
         if (!isValid) {
             return res.status(401).json({ error: 'Invalid signature' });
         }
-        let user = await models_1.User.findOne({ where: { walletAddress } });
+        let user = users.get(walletAddress);
         if (!user) {
-            user = await models_1.User.create({
+            user = {
+                id: Date.now().toString(),
+                email: '',
                 walletAddress,
-                isProducer: false
-            });
+                isProducer: false,
+                createdAt: new Date().toISOString()
+            };
+            users.set(walletAddress, user);
         }
-        const token = (0, auth_1.generateToken)(walletAddress, user.id);
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+        const token = (0, auth_1.generateToken)(user.id, walletAddress);
         res.json({
             success: true,
             user: {
@@ -73,25 +80,29 @@ const updateUserProfile = async (req, res) => {
         const { username, email, profileImage } = req.body;
         const user = req.user;
         if (username && username !== user.username) {
-            const existingUser = await models_1.User.findOne({ where: { username } });
+            const existingUser = Array.from(users.values()).find(u => u.username === username);
             if (existingUser) {
                 return res.status(400).json({ error: 'Username already taken' });
             }
         }
-        await user.update({
+        const updatedUser = {
+            ...user,
             username: username || user.username,
             email: email || user.email,
             profileImage: profileImage || user.profileImage
-        });
+        };
+        if (user.walletAddress) {
+            users.set(user.walletAddress, updatedUser);
+        }
         res.json({
             success: true,
             user: {
-                id: user.id,
-                walletAddress: user.walletAddress,
-                username: user.username,
-                email: user.email,
-                isProducer: user.isProducer,
-                profileImage: user.profileImage
+                id: updatedUser.id,
+                walletAddress: updatedUser.walletAddress,
+                username: updatedUser.username,
+                email: updatedUser.email,
+                isProducer: updatedUser.isProducer,
+                profileImage: updatedUser.profileImage
             }
         });
         return;
@@ -109,14 +120,17 @@ const becomeProducer = async (req, res) => {
         if (user.isProducer) {
             return res.status(400).json({ error: 'User is already a producer' });
         }
-        await user.update({ isProducer: true });
+        const updatedUser = { ...user, isProducer: true };
+        if (user.walletAddress) {
+            users.set(user.walletAddress, updatedUser);
+        }
         res.json({
             success: true,
             message: 'Successfully became a producer',
             user: {
-                id: user.id,
-                walletAddress: user.walletAddress,
-                username: user.username,
+                id: updatedUser.id,
+                walletAddress: updatedUser.walletAddress,
+                username: updatedUser.username,
                 isProducer: true
             }
         });
@@ -148,31 +162,14 @@ const getUserPurchases = async (req, res) => {
     try {
         const user = req.user;
         const { page = 1, limit = 10 } = req.query;
-        const purchases = await user.getPurchases({
-            include: [
-                {
-                    model: require('../models/Film').default,
-                    as: 'film',
-                    include: [
-                        {
-                            model: models_1.User,
-                            as: 'producer',
-                            attributes: ['walletAddress', 'username']
-                        }
-                    ]
-                }
-            ],
-            limit: parseInt(limit),
-            offset: (parseInt(page) - 1) * parseInt(limit),
-            order: [['createdAt', 'DESC']]
-        });
         res.json({
             success: true,
-            purchases,
+            purchases: [],
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit)
-            }
+            },
+            message: 'Purchase history will be available once Firebase integration is complete'
         });
         return;
     }
@@ -186,31 +183,14 @@ const getUserViews = async (req, res) => {
     try {
         const user = req.user;
         const { page = 1, limit = 10 } = req.query;
-        const views = await user.getViews({
-            include: [
-                {
-                    model: require('../models/Film').default,
-                    as: 'film',
-                    include: [
-                        {
-                            model: models_1.User,
-                            as: 'producer',
-                            attributes: ['walletAddress', 'username']
-                        }
-                    ]
-                }
-            ],
-            limit: parseInt(limit),
-            offset: (parseInt(page) - 1) * parseInt(limit),
-            order: [['createdAt', 'DESC']]
-        });
         res.json({
             success: true,
-            views,
+            views: [],
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit)
-            }
+            },
+            message: 'View history will be available once Firebase integration is complete'
         });
         return;
     }
@@ -226,12 +206,11 @@ const getSignMessage = async (req, res) => {
         if (!walletAddress) {
             return res.status(400).json({ error: 'Wallet address is required' });
         }
-        const timestamp = Date.now();
-        const message = (0, auth_1.generateSignMessage)(walletAddress, timestamp);
+        const message = (0, auth_1.generateSignMessage)(walletAddress);
         res.json({
             success: true,
             message,
-            timestamp
+            timestamp: Date.now()
         });
         return;
     }

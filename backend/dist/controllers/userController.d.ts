@@ -1,5 +1,13 @@
 import { Request, Response } from 'express';
-import { User } from '../models';
+interface User {
+    id: string;
+    email: string;
+    walletAddress?: string;
+    username?: string;
+    isProducer?: boolean;
+    profileImage?: string;
+    createdAt?: string;
+}
 interface AuthenticatedRequest extends Request {
     user?: User;
     walletAddress?: string;

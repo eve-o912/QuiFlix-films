@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useCustodialWallet } from '@/hooks/useCustodialWallet'
+import { useAuth } from '@/hooks/useAuth'
 import { 
   User, 
   Wallet, 
@@ -20,7 +21,8 @@ import {
 } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { address, isConnected, balance, formatAddress: formatWalletAddress } = useCustodialWallet()
+  const { userLoggedIn } = useAuth()
+  const { address, isConnected, balance, formatAddress: formatWalletAddress, isLoading: walletLoading, error: walletError } = useCustodialWallet()
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -29,13 +31,13 @@ export default function ProfilePage() {
     setMounted(true)
   }, [])
 
-  // Redirect if wallet not connected
+  // Redirect if user not logged in
   useEffect(() => {
-    if (mounted && !isConnected) {
-      router.push('/films')
+    if (mounted && !userLoggedIn) {
+      router.push('/')
     }
-  }, [mounted, isConnected, router])
-
+  }, [mounted, userLoggedIn, router])
+  
   const copyAddress = async () => {
     if (address) {
       await navigator.clipboard.writeText(address)
@@ -63,7 +65,8 @@ export default function ProfilePage() {
     )
   }
 
-  if (!isConnected) {
+  // Don't show profile if user is not logged in
+  if (!mounted || !userLoggedIn) {
     return null
   }
 
@@ -98,10 +101,17 @@ export default function ProfilePage() {
                   Manage your QuiFlix account and view your digital film collection
                 </p>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="flex items-center gap-2">
-                    <div className="h-2 w-2 bg-green-500 rounded-full" />
-                    Connected
-                  </Badge>
+                  {isConnected ? (
+                    <Badge variant="secondary" className="flex items-center gap-2">
+                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                      Wallet Connected
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="flex items-center gap-2">
+                      <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+                      Setting up wallet...
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -115,45 +125,81 @@ export default function ProfilePage() {
                   <CardTitle className="flex items-center gap-2">
                     <Wallet className="h-5 w-5" />
                     Wallet Details
+                    {!isConnected && (
+                      <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse ml-auto" />
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Address</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="text-sm bg-muted px-2 py-1 rounded flex-1">
-                        {formatWalletAddress(address!)}
-                      </code>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={copyAddress}
-                        className="flex items-center gap-1"
-                      >
-                        {copied ? (
-                          <Check className="h-3 w-3" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Click to copy full address
-                    </p>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Network</label>
-                    <p className="text-sm mt-1">Lisk Sepolia Testnet</p>
-                  </div>
+                  {isConnected ? (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Address</label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <code className="text-sm bg-muted px-2 py-1 rounded flex-1">
+                            {formatWalletAddress(address!)}
+                          </code>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={copyAddress}
+                            className="flex items-center gap-1"
+                          >
+                            {copied ? (
+                              <Check className="h-3 w-3" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Click to copy full address
+                        </p>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Network</label>
+                        <p className="text-sm mt-1">Lisk Network</p>
+                      </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Balance</label>
-                    <p className="text-sm mt-1">{balance} ETH</p>
-                    <p className="text-xs text-muted-foreground">Balance updates automatically</p>
-                  </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Balance</label>
+                        <p className="text-sm mt-1">{balance} ETH</p>
+                        <p className="text-xs text-muted-foreground">Balance updates automatically</p>
+                      </div>
+                    </>
+                  ) : walletError ? (
+                    <div className="space-y-4">
+                      <div className="text-center py-8">
+                        <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <div className="h-4 w-4 bg-red-500 rounded-full"></div>
+                        </div>
+                        <h3 className="text-sm font-medium mb-2 text-red-600">Wallet Setup Failed</h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          {walletError}
+                        </p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => window.location.reload()}
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                        <h3 className="text-sm font-medium mb-2">Setting Up Your Wallet</h3>
+                        <p className="text-xs text-muted-foreground">
+                          We're creating your secure custodial wallet. This will only take a moment.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
