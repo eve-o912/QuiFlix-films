@@ -134,6 +134,42 @@ export default function UploadFilmPage() {
 
       const result = await response.json()
 
+      // Save film data to Firebase
+      try {
+        await addDoc(collection(db, 'films'), {
+          title: formData.title,
+          description: formData.description,
+          genre: formData.genre,
+          price: formData.price,
+          releaseDate: formData.releaseDate || new Date().toISOString().split('T')[0],
+          duration: formData.duration,
+          director: formData.director,
+          cast: formData.cast,
+          language: formData.language,
+          country: formData.country,
+          rating: formData.rating,
+          ipfsHash: result.ipfsHash,
+          posterUrl: result.thumbnailUrl || '/placeholder.svg',
+          creatorId: currentUser?.uid,
+          status: 'approved', // Set to approved for testing
+          createdAt: serverTimestamp(),
+          totalViews: 0,
+          totalRevenue: '0'
+        });
+
+        toast({
+          title: "Film Saved to Database!",
+          description: "Film data has been saved successfully.",
+        });
+      } catch (firebaseError) {
+        console.error('Firebase save failed:', firebaseError);
+        toast({
+          title: "Database Save Failed",
+          description: "Film uploaded to IPFS but failed to save to database.",
+          variant: "destructive",
+        });
+      }
+
       // After successful upload to backend, send blockchain transaction to register content
       if (isConnected && walletClient && address) {
         try {
