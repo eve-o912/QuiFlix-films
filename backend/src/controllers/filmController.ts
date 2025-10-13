@@ -51,16 +51,38 @@ export const uploadMiddleware = upload.fields([
  */
 export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    console.log('Upload request received');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('Files:', req.files);
+    console.log('User:', req.user);
+
     const { title, description, genre, duration, releaseDate, price } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    // Validate required fields
-    if (!title || !description || !genre || !duration || !releaseDate || !price) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Validate authentication
+    if (!req.user) {
+      console.log('No user found in request');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Validate required fields individually
+    const missingFields = [];
+    if (!title) missingFields.push('title');
+    if (!description) missingFields.push('description');
+    if (!genre) missingFields.push('genre');
+    if (!duration) missingFields.push('duration');
+    if (!releaseDate) missingFields.push('releaseDate');
+    if (!price) missingFields.push('price');
+
+    if (missingFields.length > 0) {
+      console.log('Missing required fields:', missingFields);
+      return res.status(400).json({ error: `Missing required fields: ${missingFields.join(', ')}` });
     }
 
     // Validate files
-    if (!files.filmFile || files.filmFile.length === 0) {
+    if (!files || !files.filmFile || files.filmFile.length === 0) {
+      console.log('Film file is required');
       return res.status(400).json({ error: 'Film file is required' });
     }
 
@@ -91,6 +113,11 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
     };
 
     // Upload metadata to IPFS
+    // Ensure user is marked as producer
+    if (!req.user!.isProducer) {
+      await req.user!.update({ isProducer: true });
+    }
+
     const metadataIpfsHash = await ipfsService.uploadMetadata(metadata, `${title.replace(/\s+/g, '_')}_metadata.json`);
 
     // Create film in database (initially inactive)
@@ -486,6 +513,36 @@ export const approveFilm = async (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     console.error('Error approving film:', error);
     res.status(500).json({ error: 'Failed to approve film' });
+    return;
+  }
+};
+
+/**
+ * Get films by producer (for producer dashboard)
+ */
+export const getProducerFilms = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const producerId = req.user!.id;
+
+    const films = await Film.findAll({
+      where: { producerId },
+      include: [
+        { model: User, as: 'producer', attributes: ['walletAddress', 'username'] },
+        { model: Purchase, as: 'purchases' },
+        { model: View, as: 'views' }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      films
+    });
+    return;
+
+  } catch (error) {
+    console.error('Error getting producer films:', error);
+    res.status(500).json({ error: 'Failed to get producer films' });
     return;
   }
 };

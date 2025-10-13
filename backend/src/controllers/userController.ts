@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import blockchainService from '../services/blockchainService';
-import { generateToken, generateSignMessage } from '../middleware/auth';
+import { generateToken, generateSignMessage } from '../middleware/auth.js';
 
 interface AuthenticatedRequest extends Request {
   user?: User;

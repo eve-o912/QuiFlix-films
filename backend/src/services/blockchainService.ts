@@ -10,49 +10,60 @@ interface ContractAddresses {
 
 class BlockchainService {
   private provider: ethers.JsonRpcProvider;
-  private wallet: ethers.Wallet;
-  private nftContract: ethers.Contract;
-  private contentContract: ethers.Contract;
+  private wallet?: ethers.Wallet;
+  private nftContract?: ethers.Contract;
+  private contentContract?: ethers.Contract;
 
   constructor() {
-    this.provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-    this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, this.provider);
-    
-    // Contract ABIs (simplified - in production, load from compiled contracts)
-    const nftABI = [
-      "function createFilm(string memory _title, string memory _description, string memory _genre, uint256 _duration, uint256 _releaseDate, string memory _ipfsHash, uint256 _price, string memory _tokenURI) external returns (uint256)",
-      "function approveFilm(uint256 _tokenId) external",
-      "function purchaseFilm(uint256 _tokenId) external payable",
-      "function transferWithRoyalty(uint256 _tokenId, address _to, uint256 _price) external payable",
-      "function ownerOf(uint256 tokenId) external view returns (address)",
-      "function getFilmMetadata(uint256 _tokenId) external view returns (tuple(string title, string description, string genre, uint256 duration, uint256 releaseDate, address producer, string ipfsHash, uint256 price, bool isActive))",
-      "function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view returns (address, uint256)",
-      "event FilmCreated(uint256 indexed tokenId, address indexed producer, string title, uint256 price)",
-      "event FilmApproved(uint256 indexed tokenId, address indexed producer, string title)",
-      "event FilmPurchased(uint256 indexed tokenId, address indexed buyer, uint256 price)",
-      "event RoyaltyPaid(uint256 indexed tokenId, address indexed recipient, uint256 amount)"
-    ];
+    this.provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY');
 
-    const contentABI = [
-      "function createContent(string memory _title, string memory _ipfsHash) external returns (uint256)",
-      "function recordView(uint256 _contentId) external",
-      "function distributeRevenue(uint256 _contentId) external payable",
-      "function getContent(uint256 _contentId) external view returns (tuple(uint256 contentId, string title, string ipfsHash, address producer, uint256 totalRevenue, uint256 totalViews, bool isActive, uint256 createdAt))",
-      "event ContentCreated(uint256 indexed contentId, address indexed producer, string title, string ipfsHash)",
-      "event RevenueDistributed(uint256 indexed contentId, address indexed producer, uint256 producerAmount, uint256 platformAmount)"
-    ];
+    if (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY !== 'your-private-key-here' && process.env.PRIVATE_KEY.startsWith('0x')) {
+      try {
+        this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
+      } catch (error) {
+        console.warn('Invalid PRIVATE_KEY, blockchain features will be disabled');
+      }
+    } else {
+      console.warn('PRIVATE_KEY not set or invalid, blockchain features will be disabled');
+    }
 
-    this.nftContract = new ethers.Contract(
-      process.env.NFT_CONTRACT_ADDRESS!,
-      nftABI,
-      this.wallet
-    );
+    if (this.wallet) {
+      // Contract ABIs (simplified - in production, load from compiled contracts)
+      const nftABI = [
+        "function createFilm(string memory _title, string memory _description, string memory _genre, uint256 _duration, uint256 _releaseDate, string memory _ipfsHash, uint256 _price, string memory _tokenURI) external returns (uint256)",
+        "function approveFilm(uint256 _tokenId) external",
+        "function purchaseFilm(uint256 _tokenId) external payable",
+        "function transferWithRoyalty(uint256 _tokenId, address _to, uint256 _price) external payable",
+        "function ownerOf(uint256 tokenId) external view returns (address)",
+        "function getFilmMetadata(uint256 _tokenId) external view returns (tuple(string title, string description, string genre, uint256 duration, uint256 releaseDate, address producer, string ipfsHash, uint256 price, bool isActive))",
+        "function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view returns (address, uint256)",
+        "event FilmCreated(uint256 indexed tokenId, address indexed producer, string title, uint256 price)",
+        "event FilmApproved(uint256 indexed tokenId, address indexed producer, string title)",
+        "event FilmPurchased(uint256 indexed tokenId, address indexed buyer, uint256 price)",
+        "event RoyaltyPaid(uint256 indexed tokenId, address indexed recipient, uint256 amount)"
+      ];
 
-    this.contentContract = new ethers.Contract(
-      process.env.CONTENT_CONTRACT_ADDRESS!,
-      contentABI,
-      this.wallet
-    );
+      const contentABI = [
+        "function createContent(string memory _title, string memory _ipfsHash) external returns (uint256)",
+        "function recordView(uint256 _contentId) external",
+        "function distributeRevenue(uint256 _contentId) external payable",
+        "function getContent(uint256 _contentId) external view returns (tuple(uint256 contentId, string title, string ipfsHash, address producer, uint256 totalRevenue, uint256 totalViews, bool isActive, uint256 createdAt))",
+        "event ContentCreated(uint256 indexed contentId, address indexed producer, string title, string ipfsHash)",
+        "event RevenueDistributed(uint256 indexed contentId, address indexed producer, uint256 producerAmount, uint256 platformAmount)"
+      ];
+
+      this.nftContract = new ethers.Contract(
+        process.env.NFT_CONTRACT_ADDRESS!,
+        nftABI,
+        this.wallet
+      );
+
+      this.contentContract = new ethers.Contract(
+        process.env.CONTENT_CONTRACT_ADDRESS!,
+        contentABI,
+        this.wallet
+      );
+    }
   }
 
   /**

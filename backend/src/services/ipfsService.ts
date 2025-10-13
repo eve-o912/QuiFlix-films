@@ -1,9 +1,9 @@
-import { create, IPFSHTTPClient } from 'ipfs-http-client';
+import * as IPFS from 'kubo-rpc-client';
 import fs from 'fs';
 import path from 'path';
 
 class IPFSService {
-  private client: IPFSHTTPClient;
+  private client: ReturnType<typeof IPFS.create>;
   private gatewayUrl: string;
 
   constructor() {
@@ -13,7 +13,7 @@ class IPFSService {
 
     if (apiKey && apiSecret) {
       // For Infura or other authenticated services
-      this.client = create({
+      this.client = IPFS.create({
         url: apiUrl,
         headers: {
           authorization: 'Basic ' + Buffer.from(apiKey + ':' + apiSecret).toString('base64')
@@ -22,9 +22,9 @@ class IPFSService {
     } else if (apiKey) {
       // Try with API key in URL for services that support it
       const urlWithKey = apiUrl.includes('?') ? `${apiUrl}&key=${apiKey}` : `${apiUrl}?key=${apiKey}`;
-      this.client = create({ url: urlWithKey });
+      this.client = IPFS.create({ url: urlWithKey });
     } else {
-      this.client = create({ url: apiUrl });
+      this.client = IPFS.create({ url: apiUrl });
     }
 
     this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs/';

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -64,8 +64,13 @@ export default function UploadFilmPage() {
   })
 
   // Redirect if not authenticated
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/films')
+    }
+  }, [currentUser, router])
+
   if (!currentUser) {
-    router.push('/films')
     return null
   }
 

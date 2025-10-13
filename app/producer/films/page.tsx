@@ -1,52 +1,82 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
+import { useAuth } from '@/hooks/useAuth'
+
+interface Film {
+  id: number
+  title: string
+  poster?: string
+  status: string
+  price: string
+  minted?: number
+  total?: number
+  views?: number
+  avgWatchTime?: string
+  revenue?: string
+  royalties?: string
+}
 
 export default function MyFilmsPage() {
-  const mockFilms = [
-    {
-      id: 1,
-      title: "Quantum Paradox",
-      poster: "/futuristic-sci-fi-movie-poster.jpg",
-      status: "Live",
-      price: "$15 / 0.008 ETH",
-      minted: 3200,
-      total: 5000,
-      views: 12400,
-      avgWatchTime: "1h 45m",
-      revenue: "$48,000",
-      royalties: "$2,400",
-    },
-    {
-      id: 2,
-      title: "Neon Dreams",
-      poster: "/cyberpunk-action-movie-poster.jpg",
-      status: "Premiering",
-      price: "$12 / 0.006 ETH",
-      minted: 850,
-      total: 3000,
-      views: 2100,
-      avgWatchTime: "2h 12m",
-      revenue: "$10,200",
-      royalties: "$510",
-    },
-    {
-      id: 3,
-      title: "Ocean's Mystery",
-      poster: "/ocean-adventure-movie-poster.jpg",
-      status: "Ended",
-      price: "$10 / 0.005 ETH",
-      minted: 2500,
-      total: 2500,
-      views: 8900,
-      avgWatchTime: "1h 58m",
-      revenue: "$25,000",
-      royalties: "$1,250",
-    },
-  ]
+  const { currentUser } = useAuth()
+  const [films, setFilms] = useState<Film[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchFilms = async () => {
+      if (!currentUser) {
+        setFilms([])
+        return
+      }
+      setLoading(true)
+      setError('')
+      try {
+        const token = localStorage.getItem('authToken')
+        if (!token) {
+          setError('Authentication token missing. Please connect your wallet.')
+          setLoading(false)
+          return
+        }
+        const response = await fetch('/api/films/producer/films', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch films')
+        }
+        const data = await response.json()
+        // Map backend film data to frontend Film interface
+        const mappedFilms = data.films.map((film: any) => ({
+          id: film.id,
+          title: film.title,
+          poster: film.thumbnailUrl || '/placeholder.svg',
+          status: film.isActive ? 'Live' : 'Pending',
+          price: `${film.price} ETH`,
+          minted: film.totalPurchases || 0,
+          total: film.totalSupply || 5000, // fallback total supply
+          views: film.totalViews || 0,
+          avgWatchTime: 'N/A', // Not available from backend currently
+          revenue: film.totalRevenue ? `$${film.totalRevenue}` : '$0',
+          royalties: 'N/A' // Not available from backend currently
+        }))
+        setFilms(mappedFilms)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch films')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchFilms()
+  }, [currentUser])
 
   return (
     <div className="space-y-8">
@@ -65,8 +95,8 @@ export default function MyFilmsPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
-            <Input placeholder="Search films..." className="max-w-sm" />
-            <Select>
+            <Input placeholder="Search films..." className="max-w-sm" disabled />
+            <Select disabled>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -77,7 +107,7 @@ export default function MyFilmsPage() {
                 <SelectItem value="ended">Ended</SelectItem>
               </SelectContent>
             </Select>
-            <Select>
+            <Select disabled>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -94,7 +124,10 @@ export default function MyFilmsPage() {
 
       {/* Films Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mockFilms.map((film) => (
+        {loading && <p>Loading films...</p>}
+        {error && <p className="text-red-600">{error}</p>}
+        {!loading && !error && films.length === 0 && <p>No films uploaded yet.</p>}
+        {!loading && !error && films.map((film) => (
           <Card key={film.id} className="overflow-hidden">
             <div className="relative">
               <img src={film.poster || "/placeholder.svg"} alt={film.title} className="w-full h-48 object-cover" />
@@ -117,13 +150,13 @@ export default function MyFilmsPage() {
                 <div className="flex justify-between text-sm mb-2">
                   <span>NFTs Sold</span>
                   <span>
-                    {film.minted.toLocaleString()}/{film.total.toLocaleString()}
+                    {film.minted?.toLocaleString()}/{film.total?.toLocaleString()}
                   </span>
                 </div>
                 <div className="w-full bg-secondary rounded-full h-2">
                   <div
                     className="bg-primary h-2 rounded-full"
-                    style={{ width: `${(film.minted / film.total) * 100}%` }}
+                    style={{ width: `${(film.minted! / film.total!) * 100}%` }}
                   ></div>
                 </div>
               </div>
@@ -132,7 +165,7 @@ export default function MyFilmsPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Views</p>
-                  <p className="font-semibold">{film.views.toLocaleString()}</p>
+                  <p className="font-semibold">{film.views?.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Avg Watch</p>

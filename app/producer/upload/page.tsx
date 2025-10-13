@@ -128,12 +128,13 @@ export default function UploadFilmPage() {
             </div>
 
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Description *</Label>
               <Textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
+                required
                 placeholder="Enter film description"
                 rows={4}
               />

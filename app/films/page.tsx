@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Search, Grid, List } from "lucide-react"
-import { db } from "@/firebase/firebase"
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { useAuth } from "@/hooks/useAuth"
 
 // Film interface
@@ -58,35 +56,43 @@ export default function FilmsPage() {
     purchaseType: "nft",
   })
 
-  // Fetch films from Firestore
+  // Fetch films from backend API
   useEffect(() => {
     const fetchFilms = async () => {
       try {
-        // Only fetch approved films
-        const q = query(
-          collection(db, 'films'),
-          where('status', '==', 'approved'),
-          orderBy('createdAt', 'desc')
-        )
-        const querySnapshot = await getDocs(q)
+        // Fetch films from backend API
+        const response = await fetch('http://localhost:3001/api/films', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors',
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch films')
+        }
+
+        const data = await response.json()
         const filmsData: Film[] = []
 
-        querySnapshot.forEach((doc) => {
-          const data = doc.data()
-          filmsData.push({
-            id: doc.id,
-            title: data.title,
-            year: data.releaseDate ? new Date(data.releaseDate).getFullYear() : undefined,
-            genre: data.genre,
-            rating: 8.5, // Default rating, could be calculated from reviews
-            price: `${data.price} ETH`,
-            poster: data.posterUrl || "/placeholder.svg",
-            owned: false, // TODO: Check if user owns this NFT
-            description: data.description,
-            creatorId: data.creatorId,
-            status: data.status,
+        if (data.success && data.films) {
+          data.films.forEach((film: any) => {
+            filmsData.push({
+              id: film.id.toString(),
+              title: film.title,
+              year: film.releaseDate ? new Date(film.releaseDate).getFullYear() : undefined,
+              genre: film.genre,
+              rating: 8.5, // Default rating, could be calculated from reviews
+              price: `${film.price} ETH`,
+              poster: film.thumbnailUrl || "/placeholder.svg",
+              owned: false, // TODO: Check if user owns this NFT
+              description: film.description,
+              creatorId: film.producerId?.toString(),
+              status: film.isActive ? 'approved' : 'pending',
+            })
           })
-        })
+        }
 
         setFilms(filmsData)
       } catch (error) {

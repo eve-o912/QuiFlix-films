@@ -19,7 +19,7 @@ app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://quiflix.com', 'https://www.quiflix.com']
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true
 }));
 
@@ -79,17 +79,21 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
 // Initialize database and start server
 const startServer = async () => {
   try {
-    // Sync database
-    await syncDatabase();
-    console.log('Database synchronized successfully');
-    
+    // Sync database (optional for development)
+    try {
+      await syncDatabase();
+      console.log('Database synchronized successfully');
+    } catch (dbError) {
+      console.warn('Database synchronization failed, continuing without database:', dbError.message);
+    }
+
     const PORT = process.env.PORT || 3001;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
