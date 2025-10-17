@@ -8,13 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useCustodialWallet } from '@/hooks/useCustodialWallet'
 import { useAuth } from '@/hooks/useAuth'
-import { 
-  User, 
-  Wallet, 
-  Film, 
-  Trophy, 
-  Copy, 
-  Check, 
+import {
+  User,
+  Wallet,
+  Film,
+  Trophy,
+  Copy,
+  Check,
   ArrowLeft,
   Settings,
   Download
@@ -37,7 +37,7 @@ export default function ProfilePage() {
       router.push('/')
     }
   }, [mounted, userLoggedIn, router])
-  
+
   const copyAddress = async () => {
     if (address) {
       await navigator.clipboard.writeText(address)
@@ -51,7 +51,7 @@ export default function ProfilePage() {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-background">
-        
+
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="animate-pulse space-y-4">
@@ -72,14 +72,14 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-    
-      
+
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
           <div className="mb-6">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => router.back()}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
@@ -156,12 +156,13 @@ export default function ProfilePage() {
                           Click to copy full address
                         </p>
                       </div>
-                      
+
                       <Separator />
-                      
+
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Network</label>
                         <p className="text-sm mt-1">Lisk Network</p>
+                        <p className="text-sm mt-1">Base Network</p>
                       </div>
 
                       <div>
@@ -180,9 +181,9 @@ export default function ProfilePage() {
                         <p className="text-xs text-muted-foreground mb-4">
                           {walletError}
                         </p>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => window.location.reload()}
                         >
                           Retry
@@ -215,7 +216,7 @@ export default function ProfilePage() {
                     <p className="text-sm text-muted-foreground">Films Owned</p>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-6 text-center">
                     <Trophy className="h-8 w-8 mx-auto mb-2 text-primary" />
@@ -223,7 +224,7 @@ export default function ProfilePage() {
                     <p className="text-sm text-muted-foreground">NFTs Collected</p>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-6 text-center">
                     <Download className="h-8 w-8 mx-auto mb-2 text-primary" />

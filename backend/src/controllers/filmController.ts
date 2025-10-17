@@ -3,62 +3,20 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import ipfsService from '../services/ipfsService';
+import { addFilmMetadata } from '../services/firestoreService';
 import blockchainService from '../services/blockchainService';
-
-// Instead of importing models, define simple interfaces
-interface User {
-  id: string;
-  email: string;
-  walletAddress?: string;
-  username?: string;
-  isProducer?: boolean;
-  profileImage?: string;
-  createdAt?: string;
-}
-
-interface Film {
-  id: string;
-  title: string;
-  description: string;
-  genre: string;
-  duration: number;
-  releaseDate: string;
-  producerId: string;
-  ipfsHash: string;
-  price: string;
-  thumbnailUrl?: string;
-  isActive: boolean;
-  totalViews: number;
-  totalRevenue: string;
-  tokenId?: number;
-  createdAt: string;
-}
-
-interface Purchase {
-  id: string;
-  buyerId: string;
-  filmId: string;
-  tokenId: number;
-  transactionHash: string;
-  price: string;
-  gasUsed: string;
-  createdAt: string;
-}
-
-interface View {
-  id: string;
-  viewerId: string;
-  filmId: string;
-  duration: number;
-  completed: boolean;
-  createdAt: string;
-}
+import { 
+ 
+  User,
+  Film,
+  Purchase,
+  View
+} from '../storage';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
   walletAddress?: string;
 }
-
 // Simple in-memory storage (replace with Firebase later)
 const films: Map<string, Film> = new Map();
 const purchases: Map<string, Purchase> = new Map();

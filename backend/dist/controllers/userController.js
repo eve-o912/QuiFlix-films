@@ -31,7 +31,7 @@ const authenticateUser = async (req, res) => {
         if (!user) {
             return res.status(401).json({ error: 'User not found' });
         }
-        const token = (0, auth_1.generateToken)(user.id, walletAddress);
+        const token = (0, auth_1.generateToken)(user.id, walletAddress, user.email);
         res.json({
             success: true,
             user: {

@@ -1,25 +1,22 @@
 import { Request, Response } from 'express';
 import blockchainService from '../services/blockchainService';
 import { generateToken, generateSignMessage } from '../middleware/auth';
+import { 
+  usersStorage as users,
+  User
+} from '../storage';
 
-// Instead of importing User model, define a simple interface:
-interface User {
-  id: string;
-  email: string;
+interface AuthenticatedRequest extends Request {
+  user?: User;
   walletAddress?: string;
-  username?: string;
-  isProducer?: boolean;
-  profileImage?: string;
-  createdAt?: string;
 }
-
 interface AuthenticatedRequest extends Request {
   user?: User;
   walletAddress?: string;
 }
 
 // Simple in-memory user storage (replace with Firebase later)
-const users: Map<string, User> = new Map();
+
 
 /**
  * Register/Login user with wallet signature
@@ -56,7 +53,7 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response)
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
-    const token = generateToken(user.id, walletAddress);
+    const token = generateToken(user.id, walletAddress, user.email);
 
     res.json({
       success: true,

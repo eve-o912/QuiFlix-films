@@ -13,6 +13,7 @@ const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const filmRoutes_1 = __importDefault(require("./routes/filmRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
+const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
@@ -47,6 +48,7 @@ app.get('/health', (req, res) => {
 });
 app.use('/api/films', filmRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
+app.use('/api/admin', adminRoutes_1.default);
 app.use((err, req, res, next) => {
     console.error('Error:', err);
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -61,7 +63,7 @@ app.use((err, req, res, next) => {
             : err.message
     });
 });
-app.use('*', (req, res) => {
+app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 const startServer = async () => {
