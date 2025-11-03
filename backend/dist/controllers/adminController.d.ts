@@ -1,13 +1,7 @@
 import { Request, Response } from 'express';
+import { User } from '../storage';
 interface AuthenticatedRequest extends Request {
-    user?: {
-        id: string;
-        walletAddress?: string;
-        username?: string;
-        isProducer?: boolean;
-        profileImage?: string;
-        createdAt?: string;
-    };
+    user?: User;
     walletAddress?: string;
 }
 export declare const getAdminAnalytics: (req: AuthenticatedRequest, res: Response) => Promise<void>;

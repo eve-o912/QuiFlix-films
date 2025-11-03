@@ -13,7 +13,7 @@ interface AuthenticatedRequest extends Request {
 
 /**
  * Middleware to check if user is an admin using Firebase JWT and wallet address claim
- */
+*/
 export const requireAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<Response | void> => {
   try {
     const authHeader = req.headers.authorization;

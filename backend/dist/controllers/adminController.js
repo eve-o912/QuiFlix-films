@@ -1,14 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllFilmsAdmin = exports.removeFilm = exports.getAdminAnalytics = void 0;
-const films = new Map();
-const purchases = new Map();
-const views = new Map();
+const storage_1 = require("../storage");
 const getAdminAnalytics = async (req, res) => {
     try {
-        const allFilms = Array.from(films.values());
-        const allPurchases = Array.from(purchases.values());
-        const allViews = Array.from(views.values());
+        const allFilms = Array.from(storage_1.filmsStorage.values());
+        const allPurchases = Array.from(storage_1.purchasesStorage.values());
+        const allViews = Array.from(storage_1.viewsStorage.values());
         const totalFilms = allFilms.length;
         const activeFilms = allFilms.filter(f => f.isActive).length;
         const totalNFTsMinted = allFilms.filter(f => f.tokenId).length;
@@ -105,15 +103,15 @@ const removeFilm = async (req, res) => {
         if (!filmId) {
             return res.status(400).json({ error: 'Film ID is required' });
         }
-        const film = films.get(filmId);
+        const film = storage_1.filmsStorage.get(filmId);
         if (!film) {
             return res.status(404).json({ error: 'Film not found' });
         }
-        films.delete(filmId);
-        const filmPurchases = Array.from(purchases.values()).filter(p => p.filmId === filmId);
-        filmPurchases.forEach(purchase => purchases.delete(purchase.id));
-        const filmViews = Array.from(views.values()).filter(v => v.filmId === filmId);
-        filmViews.forEach(view => views.delete(view.id));
+        storage_1.filmsStorage.delete(filmId);
+        const filmPurchases = Array.from(storage_1.purchasesStorage.values()).filter(p => p.filmId === filmId);
+        filmPurchases.forEach(purchase => storage_1.purchasesStorage.delete(purchase.id));
+        const filmViews = Array.from(storage_1.viewsStorage.values()).filter(v => v.filmId === filmId);
+        filmViews.forEach(view => storage_1.viewsStorage.delete(view.id));
         console.log(`Film removed by admin: ${film.title} (ID: ${filmId}), Reason: ${reason || 'No reason provided'}`);
         res.json({
             success: true,
@@ -136,7 +134,7 @@ exports.removeFilm = removeFilm;
 const getAllFilmsAdmin = async (req, res) => {
     try {
         const { page = 1, limit = 20, status, genre } = req.query;
-        let filteredFilms = Array.from(films.values());
+        let filteredFilms = Array.from(storage_1.filmsStorage.values());
         if (status === 'active') {
             filteredFilms = filteredFilms.filter(f => f.isActive);
         }
@@ -164,8 +162,8 @@ const getAllFilmsAdmin = async (req, res) => {
             totalRevenue: film.totalRevenue,
             tokenId: film.tokenId,
             createdAt: film.createdAt,
-            purchases: Array.from(purchases.values()).filter(p => p.filmId === film.id).length,
-            views: Array.from(views.values()).filter(v => v.filmId === film.id).length
+            purchases: Array.from(storage_1.purchasesStorage.values()).filter(p => p.filmId === film.id).length,
+            views: Array.from(storage_1.viewsStorage.values()).filter(v => v.filmId === film.id).length
         }));
         res.json({
             success: true,

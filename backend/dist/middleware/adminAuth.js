@@ -1,36 +1,40 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAdmin = void 0;
-const auth_1 = require("./auth");
-const ADMIN_EMAIL = 'stephenkaruru05@gmail.com';
-const requireAdmin = (req, res, next) => {
+const firebase_1 = __importDefault(require("../config/firebase"));
+const ADMIN_WALLET_ADDRESS = process.env.ADMIN_ADDRESS || '';
+const requireAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ error: 'No token provided' });
         }
-        const token = authHeader.substring(7);
-        const decoded = (0, auth_1.verifyToken)(token);
-        if (!decoded) {
+        const idToken = authHeader.substring(7);
+        const decodedToken = await firebase_1.default.auth().verifyIdToken(idToken);
+        if (!decodedToken) {
             return res.status(401).json({ error: 'Invalid token' });
         }
-        const email = decoded.email;
-        if (!email) {
-            return res.status(401).json({ error: 'No email found in token. Please update your profile with your email.' });
-        }
-        if (email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        const walletAddress = decodedToken.walletAddress ||
+            decodedToken.wallet ||
+            decodedToken.ethAddress ||
+            decodedToken.ethereumAddress;
+        if (!walletAddress || String(walletAddress).toLowerCase() !== ADMIN_WALLET_ADDRESS.toLowerCase()) {
             return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
         }
+        const { uid, ...otherClaims } = decodedToken;
         req.user = {
-            id: decoded.userId,
-            walletAddress: decoded.walletAddress,
-            email: decoded.email
+            uid,
+            walletAddress: String(walletAddress),
+            ...otherClaims
         };
         return next();
     }
     catch (error) {
         console.error('Admin auth error:', error);
-        res.status(500).json({ error: 'Authentication failed' });
+        return res.status(401).json({ error: 'Invalid or expired token' });
     }
 };
 exports.requireAdmin = requireAdmin;

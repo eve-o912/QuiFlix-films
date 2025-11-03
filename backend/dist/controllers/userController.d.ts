@@ -1,12 +1,8 @@
 import { Request, Response } from 'express';
-interface User {
-    id: string;
-    email: string;
+import { User } from '../storage';
+interface AuthenticatedRequest extends Request {
+    user?: User;
     walletAddress?: string;
-    username?: string;
-    isProducer?: boolean;
-    profileImage?: string;
-    createdAt?: string;
 }
 interface AuthenticatedRequest extends Request {
     user?: User;

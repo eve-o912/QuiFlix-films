@@ -1,16 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 interface AuthenticatedRequest extends Request {
     user?: {
-        id: string;
+        uid: string;
         walletAddress?: string;
-        username?: string;
-        isProducer?: boolean;
-        profileImage?: string;
-        createdAt?: string;
-        email?: string;
+        [key: string]: any;
     };
-    walletAddress?: string;
 }
-export declare const requireAdmin: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Response | void;
+export declare const requireAdmin: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<Response | void>;
 export {};
 //# sourceMappingURL=adminAuth.d.ts.map

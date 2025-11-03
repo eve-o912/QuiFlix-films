@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSignMessage = exports.getUserViews = exports.getUserPurchases = exports.getUserNFTs = exports.becomeProducer = exports.updateUserProfile = exports.getUserProfile = exports.authenticateUser = void 0;
 const blockchainService_1 = __importDefault(require("../services/blockchainService"));
 const auth_1 = require("../middleware/auth");
-const users = new Map();
+const storage_1 = require("../storage");
 const authenticateUser = async (req, res) => {
     try {
         const { walletAddress, signature, message } = req.body;
@@ -17,7 +17,7 @@ const authenticateUser = async (req, res) => {
         if (!isValid) {
             return res.status(401).json({ error: 'Invalid signature' });
         }
-        let user = users.get(walletAddress);
+        let user = storage_1.usersStorage.get(walletAddress);
         if (!user) {
             user = {
                 id: Date.now().toString(),
@@ -26,7 +26,7 @@ const authenticateUser = async (req, res) => {
                 isProducer: false,
                 createdAt: new Date().toISOString()
             };
-            users.set(walletAddress, user);
+            storage_1.usersStorage.set(walletAddress, user);
         }
         if (!user) {
             return res.status(401).json({ error: 'User not found' });
@@ -80,7 +80,7 @@ const updateUserProfile = async (req, res) => {
         const { username, email, profileImage } = req.body;
         const user = req.user;
         if (username && username !== user.username) {
-            const existingUser = Array.from(users.values()).find(u => u.username === username);
+            const existingUser = Array.from(storage_1.usersStorage.values()).find(u => u.username === username);
             if (existingUser) {
                 return res.status(400).json({ error: 'Username already taken' });
             }
@@ -92,7 +92,7 @@ const updateUserProfile = async (req, res) => {
             profileImage: profileImage || user.profileImage
         };
         if (user.walletAddress) {
-            users.set(user.walletAddress, updatedUser);
+            storage_1.usersStorage.set(user.walletAddress, updatedUser);
         }
         res.json({
             success: true,
@@ -122,7 +122,7 @@ const becomeProducer = async (req, res) => {
         }
         const updatedUser = { ...user, isProducer: true };
         if (user.walletAddress) {
-            users.set(user.walletAddress, updatedUser);
+            storage_1.usersStorage.set(user.walletAddress, updatedUser);
         }
         res.json({
             success: true,
