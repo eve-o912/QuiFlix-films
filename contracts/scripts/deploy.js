@@ -32,8 +32,10 @@ async function main() {
   console.log("QuiFlixNFT deployed to:", nftAddress);
 
   // Save deployment info
+  const networkName = (await ethers.provider.getNetwork()).name;
   const deploymentInfo = {
-    network: "sepolia",
+    network: networkName,
+    chainId: (await ethers.provider.getNetwork()).chainId,
     contracts: {
       QuiFlixContent: contentAddress,
       QuiFlixNFT: nftAddress
@@ -46,7 +48,11 @@ async function main() {
   console.log("Deployment info:", JSON.stringify(deploymentInfo, null, 2));
 
   // Save deployment info to file
-  fs.writeFileSync('contracts/scripts/deployments.json', JSON.stringify(deploymentInfo, null, 2));
+  fs.writeFileSync('deployments.json', JSON.stringify(deploymentInfo, null, 2));
+  
+  console.log("\n📝 IMPORTANT: Update the contract addresses in client/lib/web3.ts:");
+  console.log(`QuiFlixNFT: '${nftAddress}'`);
+  console.log(`QuiFlixContent: '${contentAddress}'`);
 }
 
 main()
