@@ -21,6 +21,8 @@ import {
 import { PageLayout } from "@/components/page-layout"
 import { OnboardingTutorial } from "@/components/onboarding-tutorial"
 import { useAuth } from "@/hooks/useAuth"
+import { useWalletData } from "@/hooks/useWalletData"
+import { useWeb3 } from "@/hooks/useWeb3"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -90,6 +92,8 @@ const trendingFilms = [
 export default function DashboardPage() {
   const [showTutorial, setShowTutorial] = useState(false)
   const { currentUser, userLoggedIn, loading } = useAuth()
+  const { address, isConnected, balance, balanceSymbol, nftCount, isLoading: walletLoading } = useWalletData()
+  const { connectWallet } = useWeb3()
   const router = useRouter()
 
   // Redirect if not authenticated
@@ -152,8 +156,20 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-center mb-2">
                   <Wallet className="h-8 w-8 text-gray-100" />
                 </div>
-                <div className="text-2xl font-bold">KES 0</div>
-                <p className="text-sm text-muted-foreground">Fiat Balance</p>
+                {walletLoading ? (
+                  <div className="text-2xl font-bold">Loading...</div>
+                ) : isConnected ? (
+                  <>
+                    <div className="text-2xl font-bold">{parseFloat(balance).toFixed(4)} {balanceSymbol}</div>
+                    <p className="text-sm text-muted-foreground">Wallet Balance</p>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{address}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">Not Connected</div>
+                    <p className="text-sm text-muted-foreground">Connect Wallet</p>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -162,8 +178,14 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-center mb-2">
                   <Film className="h-8 w-8 text-gray-100" />
                 </div>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-sm text-muted-foreground">NFTs Owned</p>
+                {walletLoading ? (
+                  <div className="text-2xl font-bold">Loading...</div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{nftCount}</div>
+                    <p className="text-sm text-muted-foreground">NFTs Owned</p>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -191,6 +213,23 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Wallet Connection Prompt */}
+              {!isConnected && (
+                <Card className="border-primary/50 bg-primary/5">
+                  <CardContent className="p-6 text-center">
+                    <Wallet className="h-12 w-12 text-primary mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Connect Your Web3 Wallet</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Connect your wallet to view your NFT balance and access all Web3 features
+                    </p>
+                    <Button onClick={connectWallet} className="bg-primary hover:bg-primary/90">
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Connect Wallet
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Empty NFT Collection Message */}
               <Card>
                 <CardHeader>
@@ -199,27 +238,41 @@ export default function DashboardPage() {
                     Your NFT Collection
                   </CardTitle>
                   <CardDescription>
-                    Films you own as NFTs
+                    Films you own as NFTs {isConnected && `(${nftCount} total)`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {true ? ( // Always show empty state for now
+                  {nftCount === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-6xl mb-4">🎬</div>
-                      <h3 className="text-xl font-semibold mb-2">Your collection is empty</h3>
+                      <h3 className="text-xl font-semibold mb-2">
+                        {isConnected ? 'Your collection is empty' : 'Connect wallet to view NFTs'}
+                      </h3>
                       <p className="text-muted-foreground mb-6">
-                        Purchase your first film NFT to start building your digital cinema collection
+                        {isConnected 
+                          ? 'Purchase your first film NFT to start building your digital cinema collection'
+                          : 'Connect your wallet to see your NFT collection'}
                       </p>
-                      <Link href="/films">
-                        <Button className="bg-primary hover:bg-primary/90">
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          Browse Films
+                      {isConnected ? (
+                        <Link href="/films">
+                          <Button className="bg-primary hover:bg-primary/90">
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Browse Films
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button onClick={connectWallet} className="bg-primary hover:bg-primary/90">
+                          <Wallet className="mr-2 h-4 w-4" />
+                          Connect Wallet
                         </Button>
-                      </Link>
+                      )}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {/* NFT cards would go here */}
+                      <div className="text-center py-8 col-span-full">
+                        <p className="text-muted-foreground">You own {nftCount} NFT{nftCount !== 1 ? 's' : ''}</p>
+                      </div>
                     </div>
                   )}
                 </CardContent>

@@ -1,8 +1,9 @@
 import { createPublicClient, createWalletClient, http, getContract } from 'viem';
-import { hardhat } from 'viem/chains';
+import { liskSepolia } from './chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-// Contract addresses (from our local deployment)
+// Contract addresses (deployed on Lisk Sepolia)
+// TODO: Update these with your actual deployed contract addresses
 export const CONTRACT_ADDRESSES = {
   QuiFlixNFT: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
   QuiFlixContent: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
@@ -37,6 +38,13 @@ export const QUIFLIX_NFT_ABI = [
     "inputs": [{"name": "tokenId", "type": "uint256"}],
     "name": "ownerOf",
     "outputs": [{"name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "owner", "type": "address"}],
+    "name": "balanceOf",
+    "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
   },
@@ -155,10 +163,10 @@ export const QUIFLIX_CONTENT_ABI = [
   }
 ] as const;
 
-// Create public client for read operations
+// Create public client for read operations (using Lisk Sepolia)
 export const publicClient = createPublicClient({
-  chain: hardhat,
-  transport: http('http://127.0.0.1:8545'),
+  chain: liskSepolia,
+  transport: http('https://rpc.sepolia-api.lisk.com'),
 });
 
 // Helper function to get contract instances

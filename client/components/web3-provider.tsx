@@ -1,17 +1,17 @@
 'use client';
 
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { hardhat } from 'wagmi/chains';
+import { liskSepolia } from '@/lib/chains';
 import { injected } from 'wagmi/connectors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
 import { type State } from 'wagmi';
 
 const config = createConfig({
-  chains: [hardhat],
+  chains: [liskSepolia],
   connectors: [injected()],
   transports: {
-    [hardhat.id]: http('http://127.0.0.1:8545'),
+    [liskSepolia.id]: http('https://rpc.sepolia-api.lisk.com'),
   },
 });
 
