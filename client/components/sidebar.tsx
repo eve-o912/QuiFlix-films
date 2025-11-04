@@ -15,7 +15,6 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
-  X,
   LayoutDashboard
 } from "lucide-react"
 
@@ -65,9 +64,14 @@ export function Sidebar({ className, isCollapsed = false, onToggleCollapse, isMo
     )}>
       <div className="flex flex-col h-full py-4">
         {/* Header with toggle button */}
-        <div className="px-3 py-2">
-          <div className="flex items-center justify-between mb-6">
-            
+        <div className={cn(
+          "px-3",
+          isMobile ? "py-4" : "py-2"
+        )}>
+          <div className={cn(
+            "flex items-center mb-6",
+            isMobile ? "justify-center" : "justify-between"
+          )}>
             {!isMobile && onToggleCollapse && (
               <Button
                 variant="ghost"
@@ -141,25 +145,13 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
       <SheetTrigger asChild>
         <Button
           variant="ghost"
-          className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
+          className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden text-white"
         >
           <Menu className="h-6 w-6" />
           <span className="sr-only">Toggle Menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="pr-0 w-64 bg-black border-gray-800">
-        <div className="flex items-center justify-between mb-4 pr-4">
-          <h2 className="text-lg font-semibold text-white">QuiFlix</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setOpen(false)}
-            className="h-8 w-8 p-0 hover:bg-gray-800 text-white"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close menu</span>
-          </Button>
-        </div>
+      <SheetContent side="left" className="pr-0 w-64 bg-black border-gray-800 p-0">
         <Sidebar isMobile={true} />
       </SheetContent>
     </Sheet>

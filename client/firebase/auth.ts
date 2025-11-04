@@ -51,3 +51,29 @@ export const signInWithEmailAndPassword = async (email: string, password: string
 export const userSignOut = async () => {
     return signOut(auth);
 }
+
+// Update user profile
+export const updateUserProfile = async (uid: string, data: { username?: string }) => {
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        await setDoc(userDocRef, data, { merge: true });
+        return true;
+    } catch (error) {
+        throw error;
+    }
+}
+
+// Get user profile
+export const getUserProfile = async (uid: string) => {
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+            return userDoc.data();
+        }
+        return null;
+    } catch (error) {
+        throw error;
+    }
+}

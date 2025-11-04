@@ -182,7 +182,7 @@ export function SignupModal({ open, onOpenChange, onSuccess }: SignupModalProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center">Welcome to QuiFlix</DialogTitle>
           <DialogDescription className="text-center">

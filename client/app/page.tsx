@@ -11,8 +11,7 @@ import Image from "next/image"
 import { PageLayout } from "@/components/page-layout"
 
 export default function LandingPage() {
-    const [dialogOpen, setDialogOpen] = useState(false)
-
+    const [dialogOpen, setDialogOpen] = useState(false);
 
     return (
         <PageLayout fullWidth>

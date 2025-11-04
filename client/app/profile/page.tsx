@@ -6,8 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
 import { useCustodialWallet } from '@/hooks/useCustodialWallet'
 import { useAuth } from '@/hooks/useAuth'
+import { getUserProfile, updateUserProfile } from '@/firebase/auth'
 import {
   User,
   Wallet,
@@ -17,15 +22,21 @@ import {
   Check,
   ArrowLeft,
   Settings,
-  Download
+  Download,
+  Edit
 } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { userLoggedIn } = useAuth()
+  const { currentUser, userLoggedIn } = useAuth()
   const { address, isConnected, balance, formatAddress: formatWalletAddress, isLoading: walletLoading, error: walletError } = useCustodialWallet()
   const router = useRouter()
+  const { toast } = useToast()
   const [copied, setCopied] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [editUsername, setEditUsername] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -37,6 +48,54 @@ export default function ProfilePage() {
       router.push('/')
     }
   }, [mounted, userLoggedIn, router])
+
+  // Load user profile from Firestore
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (currentUser) {
+        try {
+          const profile = await getUserProfile(currentUser.uid)
+          setUserProfile(profile)
+          setEditUsername(profile?.username || '')
+        } catch (error) {
+          console.error('Error loading profile:', error)
+        }
+      }
+    }
+
+    if (mounted && currentUser) {
+      loadUserProfile()
+    }
+  }, [mounted, currentUser])
+
+  const handleSaveProfile = async () => {
+    if (!currentUser) return
+
+    setIsSaving(true)
+    try {
+      await updateUserProfile(currentUser.uid, {
+        username: editUsername.trim()
+      })
+
+      // Update local state
+      setUserProfile({ ...userProfile, username: editUsername.trim() })
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      })
+
+      setEditDialogOpen(false)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const copyAddress = async () => {
     if (address) {
@@ -96,8 +155,67 @@ export default function ProfilePage() {
                 <User className="h-10 w-10 text-primary" />
               </div>
               <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-2">My Profile</h1>
-                <p className="text-muted-foreground mb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-bold">
+                    {userProfile?.username || currentUser?.email?.split('@')[0] || 'User'}
+                  </h1>
+                  <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Edit Profile</DialogTitle>
+                        <DialogDescription>
+                          Update your profile information
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username</Label>
+                          <Input
+                            id="username"
+                            placeholder="Enter your username"
+                            value={editUsername}
+                            onChange={(e) => setEditUsername(e.target.value)}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            This is how other users will see you on QuiFlix
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input
+                            value={currentUser?.email || ''}
+                            disabled
+                            className="bg-muted"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Email cannot be changed
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => setEditDialogOpen(false)}
+                          disabled={isSaving}
+                        >
+                          Cancel
+                        </Button>
+                        <Button onClick={handleSaveProfile} disabled={isSaving}>
+                          {isSaving ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                <p className="text-muted-foreground mb-1">
+                  {currentUser?.email}
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
                   Manage your QuiFlix account and view your digital film collection
                 </p>
                 <div className="flex items-center gap-2">
@@ -265,7 +383,11 @@ export default function ProfilePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setEditDialogOpen(true)}
+                  >
                     <User className="h-4 w-4 mr-2" />
                     Edit Profile
                   </Button>
