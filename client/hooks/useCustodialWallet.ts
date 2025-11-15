@@ -8,6 +8,8 @@ import {
   generateWalletFromEmail, 
   createStoredWallet, 
   getWalletBalance,
+  getTokenBalance,
+  USDT_TOKEN_ADDRESS,
   fundWalletWithTestETH,
   createWalletClientFromPrivateKey
 } from '@/lib/custodial-wallet-simple';
@@ -65,18 +67,21 @@ export const useCustodialWallet = () => {
         wallet = generateWalletFromEmail(email);
         const storedWallet = createStoredWallet(email);
         localStorage.setItem(storedWalletKey, JSON.stringify(storedWallet));
-        
-        // Fund new wallet with test ETH in development
-        if (process.env.NODE_ENV === 'development') {
-          await fundWalletWithTestETH(wallet.address, '1.0');
-        }
+        localStorage.setItem(storedWalletKey, JSON.stringify(storedWallet));
       }
       
       // Create wallet client
       const walletClient = createWalletClientFromPrivateKey(wallet.privateKey);
       
-      // Get balance
-      const balance = await getWalletBalance(wallet.address);
+      // Get balance -- prefer configured USDT token if provided
+      const usdtAddress = process.env.NEXT_PUBLIC_USDT_ADDRESS || USDT_TOKEN_ADDRESS || '';
+      let balance = '0.0000';
+
+      if (usdtAddress) {
+        balance = await getTokenBalance(wallet.address, usdtAddress);
+      } else {
+        balance = await getWalletBalance(wallet.address);
+      }
       
       setState(prev => ({
         ...prev,
@@ -100,7 +105,8 @@ export const useCustodialWallet = () => {
     if (!state.wallet) return;
     
     try {
-      const balance = await getWalletBalance(state.wallet.address);
+      const usdtAddress = process.env.NEXT_PUBLIC_USDT_ADDRESS || USDT_TOKEN_ADDRESS || '';
+      const balance = usdtAddress ? await getTokenBalance(state.wallet.address, usdtAddress) : await getWalletBalance(state.wallet.address);
       setState(prev => ({ ...prev, balance }));
     } catch (error) {
       console.error('Error refreshing balance:', error);

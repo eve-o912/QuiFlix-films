@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useCustodialWallet } from '@/hooks/useCustodialWallet'
+import { getWalletBalance, getTokenBalance, getOwnedNfts, USDT_TOKEN_ADDRESS, USDC_TOKEN_ADDRESS, ERC721_ABI } from '@/lib/custodial-wallet-simple'
 import { useAuth } from '@/hooks/useAuth'
 import { getUserProfile, updateUserProfile } from '@/firebase/auth'
 import {
@@ -28,7 +29,7 @@ import {
 
 export default function ProfilePage() {
   const { currentUser, userLoggedIn } = useAuth()
-  const { address, isConnected, balance, formatAddress: formatWalletAddress, isLoading: walletLoading, error: walletError } = useCustodialWallet()
+  const { address, isConnected, balance, formatAddress: formatWalletAddress, isLoading: walletLoading, error: walletError, sendTransaction, writeContract, refreshBalance } = useCustodialWallet()
   const router = useRouter()
   const { toast } = useToast()
   const [copied, setCopied] = useState(false)
@@ -37,10 +38,72 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [editUsername, setEditUsername] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [amountKsh, setAmountKsh] = useState('')
+  const [selectedToken, setSelectedToken] = useState<'USDT' | 'USDC'>('USDT')
+  const [recipient, setRecipient] = useState<string | undefined>(address)
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false)
+  const [ethBalance, setEthBalance] = useState('0.0000')
+  const [usdtBalanceLocal, setUsdtBalanceLocal] = useState('0.0000')
+  const [usdcBalanceLocal, setUsdcBalanceLocal] = useState('0.0000')
+  const [ownedNfts, setOwnedNfts] = useState<Array<{contract: string; tokenId: string; tokenURI?: string}>>([])
+
+  // Send form state
+  const [sendAmount, setSendAmount] = useState('')
+  const [sendRecipient, setSendRecipient] = useState<string | undefined>(address)
+
+  // NFT transfer state
+  const [nftContract, setNftContract] = useState('')
+  const [nftTokenId, setNftTokenId] = useState('')
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    setRecipient(address)
+  }, [address])
+
+  useEffect(() => {
+    setSendRecipient(address)
+  }, [address])
+
+  // Fetch balances when wallet dialog opens
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!address) return
+      try {
+        const eth = await getWalletBalance(address)
+        setEthBalance(eth)
+
+        const usdtAddr = process.env.NEXT_PUBLIC_USDT_ADDRESS || USDT_TOKEN_ADDRESS || ''
+        const usdcAddr = process.env.NEXT_PUBLIC_USDC_ADDRESS || USDC_TOKEN_ADDRESS || ''
+
+        if (usdtAddr) {
+          const b = await getTokenBalance(address, usdtAddr)
+          setUsdtBalanceLocal(b)
+        }
+
+        if (usdcAddr) {
+          const b = await getTokenBalance(address, usdcAddr)
+          setUsdcBalanceLocal(b)
+        }
+
+        // NFT contracts from env (comma separated) or empty
+        const nftListRaw = process.env.NEXT_PUBLIC_NFT_CONTRACTS || ''
+        const nftContracts = nftListRaw.split(',').map(s => s.trim()).filter(Boolean)
+        if (nftContracts.length > 0) {
+          const nfts = await getOwnedNfts(address, nftContracts)
+          setOwnedNfts(nfts)
+        } else {
+          setOwnedNfts([])
+        }
+      } catch (err) {
+        console.error('Error fetching balances for dialog:', err)
+      }
+    }
+
+    if (walletDialogOpen) fetchBalances()
+  }, [walletDialogOpen, address])
 
   // Redirect if user not logged in
   useEffect(() => {
@@ -102,6 +165,51 @@ export default function ProfilePage() {
       await navigator.clipboard.writeText(address)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handleSendEth = async () => {
+    if (!sendRecipient || !sendAmount) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Recipient and amount are required.' })
+      return
+    }
+
+    try {
+      const hash = await sendTransaction(sendRecipient, sendAmount)
+      toast({ title: 'Transaction sent', description: `Tx: ${hash}` })
+
+      // Refresh balances
+      await refreshBalance()
+      if (address) {
+        const eth = await getWalletBalance(address)
+        setEthBalance(eth)
+      }
+    } catch (err) {
+      console.error('Error sending ETH:', err)
+      toast({ variant: 'destructive', title: 'Send failed', description: String(err) })
+    }
+  }
+
+  const handleSendNft = async () => {
+    if (!nftContract || !nftTokenId || !sendRecipient) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'NFT contract, token id and recipient are required.' })
+      return
+    }
+
+    try {
+      const tokenIdBig = BigInt(nftTokenId)
+      const tx = await writeContract({
+        address: nftContract as `0x${string}`,
+        abi: ERC721_ABI,
+        functionName: 'transferFrom',
+        args: [address as `0x${string}`, sendRecipient as `0x${string}`, tokenIdBig],
+      })
+
+      toast({ title: 'NFT transfer sent', description: `Tx: ${String(tx)}` })
+      // Optionally refresh balances or NFT lists later
+    } catch (err) {
+      console.error('Error transferring NFT:', err)
+      toast({ variant: 'destructive', title: 'Transfer failed', description: String(err) })
     }
   }
 
@@ -285,7 +393,7 @@ export default function ProfilePage() {
 
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Balance</label>
-                        <p className="text-sm mt-1">{balance} ETH</p>
+                        <p className="text-sm mt-1">{balance} USDT</p>
                         <p className="text-xs text-muted-foreground">Balance updates automatically</p>
                       </div>
                     </>
@@ -402,9 +510,160 @@ export default function ProfilePage() {
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Onramp / Offramp Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Onramp / Offramp (KSH ↔ Stablecoin)</CardTitle>
+                  <CardDescription>
+                    Use this section to onramp or offramp KSH to USDT or USDC on Lisk Sepolia. Connect your offramp provider later.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount-ksh">Amount (KSH)</Label>
+                      <Input
+                        id="amount-ksh"
+                        placeholder="Enter amount in KSH"
+                        value={amountKsh}
+                        onChange={(e) => setAmountKsh(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="token-select">Stablecoin</Label>
+                      <select
+                        id="token-select"
+                        className="w-full rounded border bg-background px-3 py-2"
+                        value={selectedToken}
+                        onChange={(e) => setSelectedToken(e.target.value as 'USDT' | 'USDC')}
+                      >
+                        <option value="USDT">USDT</option>
+                        <option value="USDC">USDC</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="recipient">Recipient Address</Label>
+                    <Input
+                      id="recipient"
+                      placeholder="0x..."
+                      value={recipient || ''}
+                      onChange={(e) => setRecipient(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Recipient address where stablecoins will be delivered (your wallet address by default).</p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => toast({ title: 'Onramp placeholder', description: 'Onramp flow not yet connected. You will integrate an offramp provider here.' })}
+                      className="flex-1"
+                    >
+                      Onramp KSH → {selectedToken}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => toast({ title: 'Offramp placeholder', description: 'Offramp flow not yet connected. You will integrate an offramp provider here.' })}
+                      className="flex-1"
+                    >
+                      Offramp {selectedToken} → KSH
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
+        {/* Wallet Manager Dialog */}
+        <Dialog open={walletDialogOpen} onOpenChange={setWalletDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Wallet Manager</DialogTitle>
+              <DialogDescription>
+                View balances and perform transactions from your custodial wallet.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div>
+                <Label>Address</Label>
+                <code className="block bg-muted px-2 py-1 rounded mt-1">{address}</code>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <Label>ETH Balance</Label>
+                  <div className="text-lg font-medium">{ethBalance} ETH</div>
+                </div>
+                <div className="space-y-1">
+                  <Label>USDT</Label>
+                  <div className="text-lg font-medium">{usdtBalanceLocal} USDT</div>
+                </div>
+                <div className="space-y-1">
+                  <Label>USDC</Label>
+                  <div className="text-lg font-medium">{usdcBalanceLocal} USDC</div>
+                </div>
+              </div>
+
+              <div>
+                <Separator />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Send ETH</Label>
+                  <Input placeholder="Recipient address" value={sendRecipient || ''} onChange={(e) => setSendRecipient(e.target.value)} />
+                  <Input placeholder="Amount (ETH)" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSendEth} className="flex-1">Send</Button>
+                    <Button variant="outline" onClick={() => { setSendRecipient(address); setSendAmount('') }}>Reset</Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Transfer NFT</Label>
+                  <Input placeholder="NFT Contract (0x...)" value={nftContract} onChange={(e) => setNftContract(e.target.value)} />
+                  <Input placeholder="Token ID" value={nftTokenId} onChange={(e) => setNftTokenId(e.target.value)} />
+                  <Input placeholder="Recipient" value={sendRecipient || ''} onChange={(e) => setSendRecipient(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSendNft} className="flex-1">Transfer NFT</Button>
+                    <Button variant="outline" onClick={() => { setNftContract(''); setNftTokenId('') }}>Reset</Button>
+                  </div>
+                </div>
+              </div>
+              {ownedNfts.length > 0 && (
+                <div>
+                  <Separator />
+                  <div className="mt-3">
+                    <Label>Owned NFTs</Label>
+                    <div className="grid grid-cols-1 gap-2 mt-2">
+                      {ownedNfts.map((n) => (
+                        <div key={`${n.contract}-${n.tokenId}`} className="flex items-center justify-between p-2 border rounded">
+                          <div>
+                            <div className="text-sm font-medium">Token #{n.tokenId}</div>
+                            <div className="text-xs text-muted-foreground">{n.contract}</div>
+                            {n.tokenURI && <div className="text-xs truncate">{n.tokenURI}</div>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" onClick={() => { setNftContract(n.contract); setNftTokenId(n.tokenId); setSendRecipient(address); toast({ title: 'NFT selected', description: `Token ${n.tokenId} selected for transfer` }) }}>Select</Button>
+                            <Button size="sm" variant="outline" onClick={() => { setNftContract(n.contract); setNftTokenId(n.tokenId); setSendRecipient(address); handleSendNft() }}>Transfer</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setWalletDialogOpen(false)}>Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
