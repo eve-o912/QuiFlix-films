@@ -1,39 +1,75 @@
-'use client';
+'use client'
 
-import { WagmiProvider, createConfig, http } from 'wagmi';
-import { liskSepolia } from '@/lib/chains';
-import { injected } from 'wagmi/connectors';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactNode, useState } from 'react';
-import { type State } from 'wagmi';
+import { WagmiProvider, createConfig, http } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit'
+import '@rainbow-me/rainbowkit/styles.css'
 
-const config = createConfig({
-  chains: [liskSepolia],
-  connectors: [injected()],
-  transports: {
-    [liskSepolia.id]: http('https://rpc.sepolia-api.lisk.com'),
+// Define Lisk Sepolia network
+const liskSepolia = {
+  id: 4202,
+  name: 'Lisk Sepolia',
+  network: 'lisk-sepolia',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Sepolia Ether',
+    symbol: 'ETH',
   },
-});
-
-interface Web3ProviderProps {
-  children: ReactNode;
-  initialState?: State;
+  rpcUrls: {
+    default: { http: ['https://rpc.sepolia-api.lisk.com'] },
+    public: { http: ['https://rpc.sepolia-api.lisk.com'] },
+  },
+  blockExplorers: {
+    default: { 
+      name: 'Blockscout', 
+      url: 'https://sepolia-blockscout.lisk.com' 
+    },
+  },
+  testnet: true,
 }
 
-export function Web3Provider({ children, initialState }: Web3ProviderProps) {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000,
-      },
+// Define Lisk Mainnet
+const lisk = {
+  id: 1135,
+  name: 'Lisk',
+  network: 'lisk',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Ether',
+    symbol: 'ETH',
+  },
+  rpcUrls: {
+    default: { http: ['https://rpc.api.lisk.com'] },
+    public: { http: ['https://rpc.api.lisk.com'] },
+  },
+  blockExplorers: {
+    default: { 
+      name: 'Blockscout', 
+      url: 'https://blockscout.lisk.com' 
     },
-  }));
+  },
+}
 
+const config = getDefaultConfig({
+  appName: 'QuiFlix',
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
+  chains: [liskSepolia, lisk], // Add both testnet and mainnet
+  transports: {
+    [liskSepolia.id]: http(),
+    [lisk.id]: http(),
+  },
+})
+
+const queryClient = new QueryClient()
+
+export function Web3Provider({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config} initialState={initialState}>
+    <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        {children}
+        <RainbowKitProvider>
+          {children}
+        </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
-  );
+  )
 }
