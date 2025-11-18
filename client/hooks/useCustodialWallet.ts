@@ -50,6 +50,12 @@ export const useCustodialWallet = () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
+      // Check if we're on the client side before accessing localStorage
+      if (typeof window === 'undefined') {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       // Check if wallet exists in localStorage
       const storedWalletKey = `custodial_wallet_${email}`;
       const storedWalletData = localStorage.getItem(storedWalletKey);
@@ -252,7 +258,8 @@ export const useCustodialWallet = () => {
   };
 
   const clearWallet = () => {
-    if (currentUser?.email) {
+    // Check if we're on the client side before accessing localStorage
+    if (typeof window !== 'undefined' && currentUser?.email) {
       const storedWalletKey = `custodial_wallet_${currentUser.email}`;
       localStorage.removeItem(storedWalletKey);
     }
