@@ -9,10 +9,15 @@ import { type State } from 'wagmi';
 
 const config = createConfig({
   chains: [liskSepolia],
-  connectors: [injected()],
+  connectors: [
+    injected({
+      shimDisconnect: false,
+    })
+  ],
   transports: {
     [liskSepolia.id]: http('https://rpc.sepolia-api.lisk.com'),
   },
+  ssr: true, // Enable SSR support
 });
 
 interface Web3ProviderProps {
@@ -25,6 +30,7 @@ export function Web3Provider({ children, initialState }: Web3ProviderProps) {
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
       },
     },
   }));
