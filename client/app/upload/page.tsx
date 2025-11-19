@@ -18,6 +18,9 @@ import {
   Upload, 
   Film, 
   DollarSign, 
+  Calendar, 
+  Users, 
+  Star, 
   Image as ImageIcon,
   Video,
   FileText,
@@ -92,6 +95,7 @@ export default function UploadFilmPage() {
     setIsUploading(true)
 
     try {
+      // Validate required fields
       if (!formData.title || !formData.description || !formData.genre || !formData.duration || !formData.price || !uploadedFiles.fullFilm) {
         toast({
           title: "Error",
@@ -101,6 +105,7 @@ export default function UploadFilmPage() {
         return
       }
 
+      // Create FormData for file upload
       const formDataToSend = new FormData()
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
@@ -114,11 +119,13 @@ export default function UploadFilmPage() {
         formDataToSend.append('thumbnailFile', uploadedFiles.poster)
       }
 
+      // Simulate upload progress
       for (let i = 0; i <= 90; i += 10) {
         setUploadProgress(i)
         await new Promise(resolve => setTimeout(resolve, 300))
       }
 
+      // Upload to backend API
       const response = await fetch('/api/films/upload', {
         method: 'POST',
         body: formDataToSend,
@@ -130,6 +137,7 @@ export default function UploadFilmPage() {
 
       const result = await response.json()
 
+      // Save film data to Firebase
       try {
         await addDoc(collection(db, 'films'), {
           title: formData.title,
@@ -165,6 +173,7 @@ export default function UploadFilmPage() {
         });
       }
 
+      // After successful upload to backend, send blockchain transaction to register content
       if (isConnected && walletClient && address) {
         try {
           const contractAddress = process.env.NEXT_PUBLIC_QUIFLIX_CONTENT_ADDRESS as `0x${string}`;
@@ -206,6 +215,7 @@ export default function UploadFilmPage() {
         }
       }
 
+      // Complete progress
       setUploadProgress(100)
 
       toast({
@@ -238,6 +248,7 @@ export default function UploadFilmPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
+          {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
               <Button 
@@ -260,6 +271,7 @@ export default function UploadFilmPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Basic Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -389,6 +401,7 @@ export default function UploadFilmPage() {
                   />
                 </div>
 
+                {/* Tags */}
                 <div>
                   <Label>Tags</Label>
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -417,6 +430,7 @@ export default function UploadFilmPage() {
               </CardContent>
             </Card>
 
+            {/* Pricing & Economics */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -464,6 +478,7 @@ export default function UploadFilmPage() {
               </CardContent>
             </Card>
 
+            {/* File Uploads */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -475,6 +490,7 @@ export default function UploadFilmPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Poster Upload */}
                 <div>
                   <Label className="flex items-center gap-2 mb-2">
                     <ImageIcon className="h-4 w-4" />
@@ -499,6 +515,7 @@ export default function UploadFilmPage() {
                   </div>
                 </div>
 
+                {/* Trailer Upload */}
                 <div>
                   <Label className="flex items-center gap-2 mb-2">
                     <Video className="h-4 w-4" />
@@ -523,6 +540,7 @@ export default function UploadFilmPage() {
                   </div>
                 </div>
 
+                {/* Full Film Upload */}
                 <div>
                   <Label className="flex items-center gap-2 mb-2">
                     <Film className="h-4 w-4" />
@@ -534,4 +552,82 @@ export default function UploadFilmPage() {
                       accept="video/*"
                       onChange={(e) => e.target.files?.[0] && handleFileUpload('fullFilm', e.target.files[0])}
                       className="hidden"
-                      id
+                      id="film-upload"
+                    />
+                    <label htmlFor="film-upload" className="cursor-pointer">
+                      <Film className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm">Click to upload full film</p>
+                      <p className="text-xs text-muted-foreground">MP4, MOV up to 5GB</p>
+                    </label>
+                    {uploadedFiles.fullFilm && (
+                      <p className="text-sm text-green-600 mt-2">✓ {uploadedFiles.fullFilm.name}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Optional Script Upload */}
+                <div>
+                  <Label className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4" />
+                    Script (Optional)
+                  </Label>
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload('script', e.target.files[0])}
+                      className="hidden"
+                      id="script-upload"
+                    />
+                    <label htmlFor="script-upload" className="cursor-pointer">
+                      <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm">Click to upload script</p>
+                      <p className="text-xs text-muted-foreground">PDF, DOC, TXT up to 50MB</p>
+                    </label>
+                    {uploadedFiles.script && (
+                      <p className="text-sm text-green-600 mt-2">✓ {uploadedFiles.script.name}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upload Progress */}
+            {isUploading && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Uploading...</span>
+                      <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="w-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Submit Button */}
+            <div className="flex justify-end space-x-4 pt-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => router.push('/films')}
+                disabled={isUploading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isUploading || !formData.title || !formData.description || !formData.genre || !formData.price}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {isUploading ? 'Uploading...' : 'Submit Film'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
