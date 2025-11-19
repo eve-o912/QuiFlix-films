@@ -22,9 +22,9 @@ app.use(cors({
     ? [
         'https://quiflix.com',
         'https://www.quiflix.com',
-        'https://quiflix-films.vercel.app', // Add your Vercel URL
-        'https://qui-flix-films.vercel.app', // Add variations if needed
-        process.env.FRONTEND_URL // Add this to your .env
+        'https://quiflix-films.vercel.app',
+        'https://qui-flix-films.vercel.app',
+        process.env.FRONTEND_URL
       ].filter(Boolean)
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
@@ -111,7 +111,6 @@ const startServer = async () => {
     const PORT = process.env.PORT || 3001;
     
     app.listen(PORT, () => {
-      // FIX: Use parentheses, not backticks
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
       console.log(`Health check: http://localhost:${PORT}/health`);
