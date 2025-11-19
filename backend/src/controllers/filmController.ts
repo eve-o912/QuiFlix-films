@@ -6,7 +6,6 @@ import ipfsService from '../services/ipfsService';
 import { addFilmMetadata } from '../services/firestoreService';
 import blockchainService from '../services/blockchainService';
 import { 
- 
   User,
   Film,
   Purchase,
@@ -17,6 +16,7 @@ interface AuthenticatedRequest extends Request {
   user?: User;
   walletAddress?: string;
 }
+
 // Simple in-memory storage (replace with Firebase later)
 const films: Map<string, Film> = new Map();
 const purchases: Map<string, Purchase> = new Map();
@@ -40,14 +40,26 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '104857600') // 100MB default
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || '5368709120') // 5GB default (5 * 1024 * 1024 * 1024)
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'image/jpeg', 'image/png', 'image/gif'];
+    const allowedTypes = [
+      'video/mp4', 
+      'video/avi', 
+      'video/mov', 
+      'video/mkv',
+      'video/quicktime', // For .mov files
+      'video/x-matroska', // For .mkv files
+      'image/jpeg', 
+      'image/png', 
+      'image/gif',
+      'image/webp'
+    ];
+    
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only video and image files are allowed.'));
+      cb(new Error(`Invalid file type: ${file.mimetype}. Only video and image files are allowed.`));
     }
   }
 });
@@ -77,6 +89,8 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
 
     const filmFile = files.filmFile[0];
     const thumbnailFile = files.thumbnailFile?.[0];
+
+    console.log(`Uploading film: ${title}, File size: ${filmFile.size} bytes`);
 
     // Upload film to IPFS
     const filmIpfsHash = await ipfsService.uploadFile(filmFile.path, filmFile.originalname);
@@ -124,14 +138,13 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
     };
     films.set(filmId, film);
 
-    // Note: Blockchain transaction will be done on frontend using custodial wallet
-    // For now, store the metadata IPFS hash
-
     // Clean up uploaded files
     fs.unlinkSync(filmFile.path);
     if (thumbnailFile) {
       fs.unlinkSync(thumbnailFile.path);
     }
+
+    console.log(`Film uploaded successfully: ${filmId}`);
 
     res.status(201).json({
       success: true,
@@ -147,7 +160,10 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
 
   } catch (error) {
     console.error('Error uploading film:', error);
-    res.status(500).json({ error: 'Failed to upload film' });
+    res.status(500).json({ 
+      error: 'Failed to upload film',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
     return;
   }
 };
@@ -271,7 +287,7 @@ export const streamFilm = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to stream film' });
     return;
   }
- };
+};
 
 /**
  * Resell NFT (secondary market logic)
@@ -423,7 +439,6 @@ export const getAllFilms = async (req: Request, res: Response) => {
     if (genre) filteredFilms = filteredFilms.filter(f => f.genre === genre);
 
     if (producer) {
-      // For now, filter by producerId directly (assuming producer is walletAddress)
       filteredFilms = filteredFilms.filter(f => f.producerId === producer);
     }
 
@@ -441,8 +456,8 @@ export const getAllFilms = async (req: Request, res: Response) => {
       duration: film.duration,
       releaseDate: film.releaseDate,
       producer: {
-        walletAddress: film.producerId, // Simplified
-        username: '' // Would need to get from users map
+        walletAddress: film.producerId,
+        username: ''
       },
       price: film.price,
       thumbnailUrl: film.thumbnailUrl,
@@ -531,8 +546,8 @@ export const getFilmById = async (req: Request, res: Response) => {
       duration: film.duration,
       releaseDate: film.releaseDate,
       producer: {
-        walletAddress: film.producerId, // Simplified
-        username: '' // Would need to get from users map
+        walletAddress: film.producerId,
+        username: ''
       },
       price: film.price,
       thumbnailUrl: film.thumbnailUrl,
