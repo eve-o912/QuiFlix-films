@@ -40,10 +40,21 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '104857600') // 100MB default
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || '524288000') // 500MB default (524288000 bytes)
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'image/jpeg', 'image/png', 'image/gif'];
+    const allowedTypes = [
+      'video/mp4', 
+      'video/avi', 
+      'video/mov', 
+      'video/mkv',
+      'video/webm',
+      'video/quicktime',
+      'image/jpeg', 
+      'image/png', 
+      'image/gif',
+      'image/webp'
+    ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -63,29 +74,42 @@ export const uploadMiddleware: RequestHandler = upload.fields([
  */
 export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    console.log('Upload request received');
+    console.log('Body:', req.body);
+    console.log('Files:', req.files);
+
     const { title, description, genre, duration, releaseDate, price } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     // Validate required fields
     if (!title || !description || !genre || !duration || !releaseDate || !price) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      console.error('Missing required fields');
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        received: { title, description, genre, duration, releaseDate, price }
+      });
     }
 
     // Validate files
     if (!files.filmFile || files.filmFile.length === 0) {
+      console.error('Film file is missing');
       return res.status(400).json({ error: 'Film file is required' });
     }
 
     const filmFile = files.filmFile[0];
     const thumbnailFile = files.thumbnailFile?.[0];
 
+    console.log(`Uploading film: ${filmFile.originalname} (${filmFile.size} bytes)`);
+
     // Upload film to IPFS
     const filmIpfsHash = await ipfsService.uploadFile(filmFile.path, filmFile.originalname);
+    console.log(`Film uploaded to IPFS: ${filmIpfsHash}`);
     
     // Upload thumbnail to IPFS if provided
     let thumbnailIpfsHash = null;
     if (thumbnailFile) {
       thumbnailIpfsHash = await ipfsService.uploadFile(thumbnailFile.path, thumbnailFile.originalname);
+      console.log(`Thumbnail uploaded to IPFS: ${thumbnailIpfsHash}`);
     }
 
     // Create metadata object
@@ -104,6 +128,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
 
     // Upload metadata to IPFS
     const metadataIpfsHash = await ipfsService.uploadMetadata(metadata, `${title.replace(/\s+/g, '_')}_metadata.json`);
+    console.log(`Metadata uploaded to IPFS: ${metadataIpfsHash}`);
 
     // Create film in memory storage (initially inactive)
     const filmId = Date.now().toString();
@@ -125,13 +150,17 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
     };
     films.set(filmId, film);
 
-    // Note: Blockchain transaction will be done on frontend using custodial wallet
-    // For now, store the metadata IPFS hash
+    console.log(`Film created with ID: ${filmId}`);
 
     // Clean up uploaded files
-    fs.unlinkSync(filmFile.path);
-    if (thumbnailFile) {
-      fs.unlinkSync(thumbnailFile.path);
+    try {
+      fs.unlinkSync(filmFile.path);
+      if (thumbnailFile) {
+        fs.unlinkSync(thumbnailFile.path);
+      }
+      console.log('Temporary files cleaned up');
+    } catch (cleanupError) {
+      console.warn('Error cleaning up temporary files:', cleanupError);
     }
 
     res.status(201).json({
@@ -148,7 +177,10 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
 
   } catch (error) {
     console.error('Error uploading film:', error);
-    res.status(500).json({ error: 'Failed to upload film' });
+    res.status(500).json({ 
+      error: 'Failed to upload film',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
     return;
   }
 };
