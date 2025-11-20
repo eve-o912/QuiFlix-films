@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+
 import filmRoutes from './routes/filmRoutes';
 import userRoutes from './routes/userRoutes';
 import adminRoutes from './routes/adminRoutes';
@@ -78,7 +79,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({ 
       error: 'File too large',
-      message: 'The uploaded file exceeds the maximum allowed size'
+      message: 'The uploaded file exceeds the maximum allowed size of 500MB'
     });
   }
   
