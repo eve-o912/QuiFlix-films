@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// New Next.js App Router configuration
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Maximum execution time in seconds
+
 export async function POST(request: NextRequest) {
   try {
     // Get the form data from the request
@@ -60,12 +65,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Note: Vercel has a 4.5MB limit for API routes body size
+// Note: Vercel has a 4.5MB limit for API routes body size in the free tier
+// For the body size limit, you'll need to configure this in vercel.json
 // Large files should be uploaded directly to IPFS from the client
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
-  },
-};
