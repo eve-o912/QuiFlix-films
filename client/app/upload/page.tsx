@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,14 +30,12 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 
-// Force dynamic rendering - prevents SSR/SSG
-export const dynamic = 'force-dynamic'
-
 export default function UploadFilmPage() {
   const { address, isConnected, formatAddress, walletClient } = useCustodialWallet()
-  const { currentUser } = useAuth()
+  const { currentUser, isLoading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const [isMounted, setIsMounted] = useState(false)
   
   const [formData, setFormData] = useState({
     title: '',
@@ -65,9 +63,32 @@ export default function UploadFilmPage() {
     script: null as File | null
   })
 
-  // Redirect if not authenticated
+  // Ensure component only renders on client
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Redirect if not authenticated (only after mount)
+  useEffect(() => {
+    if (isMounted && !isLoading && !currentUser) {
+      router.push('/films')
+    }
+  }, [isMounted, isLoading, currentUser, router])
+
+  // Don't render anything until mounted and auth is loaded
+  if (!isMounted || isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated
   if (!currentUser) {
-    router.push('/films')
     return null
   }
 
@@ -265,9 +286,11 @@ export default function UploadFilmPage() {
             <p className="text-muted-foreground">
               Upload your film to QuiFlix and start earning from your creative work
             </p>
-            <div className="flex items-center gap-2 mt-4">
-              <Badge variant="outline">Connected: {address?.slice(0, 6)}...{address?.slice(-4)}</Badge>
-            </div>
+            {address && (
+              <div className="flex items-center gap-2 mt-4">
+                <Badge variant="outline">Connected: {address.slice(0, 6)}...{address.slice(-4)}</Badge>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
