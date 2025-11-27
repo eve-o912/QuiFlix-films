@@ -28,5 +28,17 @@ export const liskMainnet = defineChain({
   }
 });
 
-// Re-export Lisk Sepolia if you have it defined elsewhere
-export { liskSepolia } from 'wagmi/chains';
+// Base Sepolia Testnet (for testing)
+export const baseSepolia = defineChain({
+  id: 84532,
+  name: 'Base Sepolia',
+  nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://sepolia.base.org'] },
+    public: { http: ['https://sepolia.base.org'] }
+  },
+  blockExplorers: {
+    default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' }
+  },
+  testnet: true
+});
