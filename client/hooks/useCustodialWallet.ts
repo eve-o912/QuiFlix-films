@@ -11,12 +11,23 @@ import {
   fundWalletWithTestETH,
   createWalletClientFromPrivateKey
 } from '@/lib/custodial-wallet-simple';
-import { WalletClient } from 'viem';
+import { WalletClient, formatUnits, createPublicClient, http } from 'viem';
+import { baseMainnet, liskMainnet } from '@/lib/chains';
+import { TOKEN_ADDRESSES, ERC20_ABI } from '@/lib/tokens';
+
+// Add token balance interface
+interface TokenBalance {
+  symbol: string;
+  balance: string;
+  decimals: number;
+  address: string;
+}
 
 export interface CustodialWalletState {
   wallet: CustodialWallet | null;
   walletClient: WalletClient | null;
   balance: string;
+  tokenBalances: TokenBalance[];  // NEW
   isLoading: boolean;
   error: string | null;
 }
@@ -27,6 +38,7 @@ export const useCustodialWallet = () => {
     wallet: null,
     walletClient: null,
     balance: '0.0000',
+    tokenBalances: [],  // NEW
     isLoading: false,
     error: null
   });
@@ -41,10 +53,82 @@ export const useCustodialWallet = () => {
         ...prev,
         wallet: null,
         walletClient: null,
-        balance: '0.0000'
+        balance: '0.0000',
+        tokenBalances: []  // NEW
       }));
     }
   }, [userLoggedIn, currentUser]);
+
+  // NEW: Function to fetch token balances
+  const getTokenBalances = async (address: string, chainId: number): Promise<TokenBalance[]> => {
+    const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+    if (!tokens) return [];
+
+    // Create public client for the specific chain
+    const chain = chainId === 8453 ? baseMainnet : chainId === 1135 ? liskMainnet : null;
+    if (!chain) return [];
+
+    const publicClient = createPublicClient({
+      chain,
+      transport: http()
+    });
+
+    const balances: TokenBalance[] = [];
+
+    try {
+      // Get USDC balance if available
+      if (tokens.USDC) {
+        const [balance, decimals] = await Promise.all([
+          publicClient.readContract({
+            address: tokens.USDC as `0x${string}`,
+            abi: ERC20_ABI,
+            functionName: 'balanceOf',
+            args: [address as `0x${string}`]
+          }),
+          publicClient.readContract({
+            address: tokens.USDC as `0x${string}`,
+            abi: ERC20_ABI,
+            functionName: 'decimals'
+          })
+        ]);
+
+        balances.push({
+          symbol: 'USDC',
+          balance: formatUnits(balance as bigint, decimals as number),
+          decimals: decimals as number,
+          address: tokens.USDC
+        });
+      }
+
+      // Get USDT balance if available
+      if (tokens.USDT) {
+        const [balance, decimals] = await Promise.all([
+          publicClient.readContract({
+            address: tokens.USDT as `0x${string}`,
+            abi: ERC20_ABI,
+            functionName: 'balanceOf',
+            args: [address as `0x${string}`]
+          }),
+          publicClient.readContract({
+            address: tokens.USDT as `0x${string}`,
+            abi: ERC20_ABI,
+            functionName: 'decimals'
+          })
+        ]);
+
+        balances.push({
+          symbol: 'USDT',
+          balance: formatUnits(balance as bigint, decimals as number),
+          decimals: decimals as number,
+          address: tokens.USDT
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching token balances:', error);
+    }
+
+    return balances;
+  };
 
   const initializeWallet = async (email: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -84,11 +168,21 @@ export const useCustodialWallet = () => {
       // Get balance
       const balance = await getWalletBalance(wallet.address);
       
+      // Get token balances on mainnet chains
+      const chainId = walletClient.chain?.id || 1135; // Default to Lisk mainnet
+      let tokenBalances: TokenBalance[] = [];
+      
+      // Only fetch token balances on mainnet (Base or Lisk)
+      if (chainId === 8453 || chainId === 1135) {
+        tokenBalances = await getTokenBalances(wallet.address, chainId);
+      }
+      
       setState(prev => ({
         ...prev,
         wallet,
         walletClient,
         balance,
+        tokenBalances,  // NEW
         isLoading: false
       }));
       
@@ -102,12 +196,22 @@ export const useCustodialWallet = () => {
     }
   };
 
+  // UPDATED: Now fetches token balances too
   const refreshBalance = async () => {
-    if (!state.wallet) return;
+    if (!state.wallet || !state.walletClient) return;
     
     try {
       const balance = await getWalletBalance(state.wallet.address);
-      setState(prev => ({ ...prev, balance }));
+      
+      // Get token balances if on mainnet
+      const chainId = state.walletClient.chain?.id;
+      let tokenBalances: TokenBalance[] = [];
+      
+      if (chainId && (chainId === 8453 || chainId === 1135)) {
+        tokenBalances = await getTokenBalances(state.wallet.address, chainId);
+      }
+      
+      setState(prev => ({ ...prev, balance, tokenBalances }));
     } catch (error) {
       console.error('Error refreshing balance:', error);
     }
@@ -160,6 +264,68 @@ export const useCustodialWallet = () => {
         ...prev, 
         isLoading: false, 
         error: 'Transaction failed' 
+      }));
+      throw error;
+    }
+  };
+
+  // NEW: Function to send tokens (USDC/USDT)
+  const sendToken = async (tokenSymbol: 'USDC' | 'USDT', to: string, amount: string) => {
+    if (!state.walletClient || !state.wallet) {
+      throw new Error('Wallet not initialized');
+    }
+
+    const chainId = state.walletClient.chain?.id;
+    if (!chainId) {
+      throw new Error('Chain not detected');
+    }
+
+    const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+    if (!tokens || !tokens[tokenSymbol]) {
+      throw new Error(`${tokenSymbol} not supported on this network`);
+    }
+
+    try {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+      const tokenAddress = tokens[tokenSymbol];
+      
+      // Get token decimals
+      const publicClient = createPublicClient({
+        chain: state.walletClient.chain!,
+        transport: http()
+      });
+
+      const decimals = await publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'decimals'
+      }) as number;
+
+      // Convert amount to token units
+      const amountInUnits = BigInt(Math.floor(parseFloat(amount) * Math.pow(10, decimals)));
+
+      // Send transaction
+      const hash = await state.walletClient.writeContract({
+        account: state.walletClient.account!,
+        chain: state.walletClient.chain,
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [to as `0x${string}`, amountInUnits]
+      });
+
+      // Refresh balances after transaction
+      await refreshBalance();
+
+      setState(prev => ({ ...prev, isLoading: false }));
+      return hash;
+    } catch (error) {
+      console.error('Error sending token:', error);
+      setState(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        error: 'Token transfer failed' 
       }));
       throw error;
     }
@@ -268,6 +434,7 @@ export const useCustodialWallet = () => {
       wallet: null,
       walletClient: null,
       balance: '0.0000',
+      tokenBalances: [],  // NEW
       isLoading: false,
       error: null
     });
@@ -279,6 +446,7 @@ export const useCustodialWallet = () => {
     walletClient: state.walletClient,
     address: state.wallet?.address,
     balance: state.balance,
+    tokenBalances: state.tokenBalances,  // NEW
     
     // State
     isLoading: state.isLoading,
@@ -289,6 +457,7 @@ export const useCustodialWallet = () => {
     refreshBalance,
     fundWallet,
     sendTransaction,
+    sendToken,  // NEW
     signMessage,
     signTypedData,
     writeContract,
