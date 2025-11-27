@@ -7,18 +7,18 @@ export const TOKEN_ADDRESSES = {
   },
   // Lisk Mainnet (Chain ID: 1135)
   1135: {
-    USDC: '0x7d8146cf21e8d7cbe46054e01588207b51198729', // Example address - replace with actual
-    USDT: '0x', // Add actual address if available
+    USDC: '0x7d8146cf21e8d7cbe46054e01588207b51198729',
+    USDT: '0x',
   },
   // Base Sepolia Testnet (Chain ID: 84532)
   84532: {
     USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-    USDT: '0x', // Add if available
+    USDT: '0x',
   },
   // Lisk Sepolia Testnet (Chain ID: 4202)
   4202: {
-    USDC: '0x', // Add if available
-    USDT: '0x', // Add if available
+    USDC: '0x',
+    USDT: '0x',
   }
 } as const;
 
