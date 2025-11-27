@@ -24,7 +24,7 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
     <div className="flex min-h-[calc(100vh-4rem)]">
       {/* Desktop Sidebar - conditionally rendered */}
       {showSidebar && <DesktopSidebar />}
-
+      
       {/* Main Content */}
       <main className={`flex-1 bg-background ${showSidebar ? '' : 'w-full'} px-2 sm:px-4 md:px-6`}>
         {children}
