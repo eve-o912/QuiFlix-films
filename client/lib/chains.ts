@@ -1,5 +1,6 @@
-import { defineChain } from 'viem'
+import { defineChain } from 'viem';
 
+// Base Mainnet
 export const baseMainnet = defineChain({
   id: 8453,
   name: 'Base',
@@ -10,15 +11,10 @@ export const baseMainnet = defineChain({
   },
   blockExplorers: {
     default: { name: 'BaseScan', url: 'https://basescan.org' }
-  },
-  contracts: {
-    multicall3: {
-      address: '0xca11bde05977b3631167028862be2a173976ca11',
-      blockCreated: 5022
-    }
   }
-})
+});
 
+// Lisk Mainnet
 export const liskMainnet = defineChain({
   id: 1135,
   name: 'Lisk',
@@ -29,13 +25,8 @@ export const liskMainnet = defineChain({
   },
   blockExplorers: {
     default: { name: 'Blockscout', url: 'https://blockscout.lisk.com' }
-  },
-  contracts: {
-    multicall3: {
-      address: '0xca11bde05977b3631167028862be2a173976ca11',
-      blockCreated: 0
-    }
   }
-})
+});
 
-export const supportedChains = [baseMainnet, liskMainnet] as const
+// Re-export Lisk Sepolia if you have it defined elsewhere
+export { liskSepolia } from 'wagmi/chains';
