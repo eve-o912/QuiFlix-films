@@ -1,6 +1,6 @@
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createWalletClient, http, WalletClient, createPublicClient } from 'viem';
-import { liskSepolia } from './chains';
+import { liskMainnet } from './chains'; // Changed from liskSepolia to liskMainnet
 
 export interface CustodialWallet {
   address: string;
@@ -34,7 +34,7 @@ function simpleHash(input: string): string {
  * This ensures the same email always generates the same wallet
  */
 export function generateWalletFromEmail(email: string): CustodialWallet {
-  const secret = process.env.NEXT_PUBLIC_SECRET_SALT; // In production, use environment variable
+  const secret = process.env.NEXT_PUBLIC_SECRET_SALT;
   const combined = `${email.toLowerCase().trim()}:${secret}`;
   
   // Generate a deterministic hash
@@ -71,8 +71,8 @@ export function createWalletClientFromPrivateKey(privateKey: string): WalletClie
   
   return createWalletClient({
     account,
-    chain: liskSepolia,
-    transport: http(liskSepolia.rpcUrls.default.http[0]),
+    chain: liskMainnet, // Changed from liskSepolia
+    transport: http(liskMainnet.rpcUrls.default.http[0]),
   });
 }
 
@@ -94,8 +94,8 @@ export function createStoredWallet(email: string): StoredWallet {
  */
 export async function getWalletBalance(address: string): Promise<string> {
   const publicClient = createPublicClient({
-    chain: liskSepolia,
-    transport: http(liskSepolia.rpcUrls.default.http[0]),
+    chain: liskMainnet, // Changed from liskSepolia
+    transport: http(liskMainnet.rpcUrls.default.http[0]),
   });
   
   try {
@@ -108,27 +108,10 @@ export async function getWalletBalance(address: string): Promise<string> {
 }
 
 /**
- * Fund wallet with test ETH (development only)
+ * Fund wallet with test ETH (development only - won't work on mainnet)
  */
 export async function fundWalletWithTestETH(address: string, amount: string = '1'): Promise<boolean> {
-  try {
-    // In development, we can use a pre-funded hardhat account to send ETH
-    const fundingPrivateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; // Hardhat account #0
-    const fundingClient = createWalletClientFromPrivateKey(fundingPrivateKey);
-    
-    const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
-    
-    const hash = await fundingClient.sendTransaction({
-      account: fundingClient.account!,
-      chain: liskSepolia,
-      to: address as `0x${string}`,
-      value: amountInWei,
-    });
-    
-    console.log(`Funded wallet ${address} with ${amount} ETH. Transaction: ${hash}`);
-    return true;
-  } catch (error) {
-    console.error('Error funding wallet:', error);
-    return false;
-  }
+  // Note: This function won't work on mainnet - only for testing on testnet/local
+  console.warn('fundWalletWithTestETH is disabled on mainnet');
+  return false;
 }
