@@ -1,10 +1,8 @@
 'use client';
-
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
-
 // IMPORT UPDATED MAINNET CHAINS
 import { baseMainnet, liskMainnet } from '@/lib/chains';
 
@@ -23,9 +21,10 @@ const config = createConfig({
   ssr: true,
 });
 
-export default function Web3Provider({ children }: { children: ReactNode }) {
+// Changed to named export
+export function Web3Provider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-
+  
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
