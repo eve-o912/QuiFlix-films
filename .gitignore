@@ -2,8 +2,15 @@
 
 # dependencies
 /node_modules
+/backend/node_modules
+/contracts/node_modules
 /functions
-backend/node_modules/
+*/**/node_modules/
+
+# Prisma
+/backend/prisma/migrations
+.env.production
+
 # next.js
 /.next/
 /out/
