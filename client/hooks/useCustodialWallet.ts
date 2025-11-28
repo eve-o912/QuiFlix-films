@@ -13,7 +13,46 @@ import {
 } from '@/lib/custodial-wallet-simple';
 import { WalletClient, formatUnits, createPublicClient, http } from 'viem';
 import { baseMainnet, liskMainnet } from '@/lib/chains';
-import { TOKEN_ADDRESSES, ERC20_ABI } from '@/lib/tokens';
+
+// Token addresses - CORRECTED
+const TOKEN_ADDRESSES = {
+  8453: { // Base
+    USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
+  },
+  1135: { // Lisk
+    USDC: '0xf242275d3a6527d877f2c927a82d9b057609cc71', // ✅ CORRECTED
+    USDT: '0x05D032ac25d322df992303dCa074EE7392C117b9'
+  }
+};
+
+// ERC20 ABI
+export const ERC20_ABI = [
+  {
+    constant: true,
+    inputs: [{ name: '_owner', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: 'balance', type: 'uint256' }],
+    type: 'function'
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    type: 'function'
+  },
+  {
+    constant: false,
+    inputs: [
+      { name: '_to', type: 'address' },
+      { name: '_value', type: 'uint256' }
+    ],
+    name: 'transfer',
+    outputs: [{ name: '', type: 'bool' }],
+    type: 'function'
+  }
+] as const;
 
 // Add token balance interface
 interface TokenBalance {
@@ -43,7 +82,7 @@ export function useCustodialWallet() {
     error: null
   });
 
-  // NEW: Function to fetch token balances
+  // Function to fetch token balances
   const getTokenBalances = useCallback(async (address: string, chainId: number): Promise<TokenBalance[]> => {
     const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
     if (!tokens) return [];
@@ -195,7 +234,7 @@ export function useCustodialWallet() {
     }
   }, [userLoggedIn, currentUser?.email, initializeWallet]);
 
-  // UPDATED: Now fetches token balances too
+  // Refresh balance - now fetches token balances too
   const refreshBalance = useCallback(async () => {
     if (!state.wallet || !state.walletClient) return;
     
@@ -268,7 +307,7 @@ export function useCustodialWallet() {
     }
   }, [state.walletClient, state.wallet, refreshBalance]);
 
-  // NEW: Function to send tokens (USDC/USDT)
+  // Function to send tokens (USDC/USDT)
   const sendToken = useCallback(async (tokenSymbol: 'USDC' | 'USDT', to: string, amount: string) => {
     if (!state.walletClient || !state.wallet) {
       throw new Error('Wallet not initialized');
