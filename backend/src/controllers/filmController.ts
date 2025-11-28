@@ -106,6 +106,15 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
 
     // Create film in memory storage (initially inactive)
     const filmId = Date.now().toString();
+    // Debug log for user and walletAddress
+    console.log('uploadFilm: req.user =', req.user);
+    console.log('uploadFilm: req.walletAddress =', req.walletAddress);
+
+    const producerId = req.user?.id || req.walletAddress || 'unknown';
+    if (producerId === 'unknown') {
+      console.warn('Warning: No producerId found in req.user or req.walletAddress');
+    }
+
     const film: Film = {
       id: filmId,
       title,
@@ -113,7 +122,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       genre,
       duration: parseInt(duration),
       releaseDate: new Date(releaseDate).toISOString(),
-      producerId: req.user!.id,
+      producerId,
       ipfsHash: filmIpfsHash,
       price: price.toString(),
       thumbnailUrl: thumbnailIpfsHash ? ipfsService.getGatewayUrl(thumbnailIpfsHash) : undefined,

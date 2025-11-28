@@ -394,8 +394,8 @@ class DatabaseService {
       },
     });
 
-    const totalRevenue = films.reduce((sum: string | number, film: { totalRevenue: string | number | bigint | boolean; }) => {
-      return sum + BigInt(film.totalRevenue);
+    const totalRevenue = films.reduce((sum: bigint, film: { totalRevenue: string | number | bigint | boolean; }) => {
+      return sum + BigInt(String(film.totalRevenue));
     }, BigInt(0));
 
     const totalViews = films.reduce((sum: any, film: { totalViews: any; }) => sum + film.totalViews, 0);

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,10 +62,22 @@ export default function UploadFilmPage() {
     script: null as File | null
   })
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated - use useEffect to avoid render-time navigation
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/films')
+    }
+  }, [currentUser, router])
+
+  // Don't render the form if not authenticated
   if (!currentUser) {
-    router.push('/films')
-    return null
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-500">Redirecting...</p>
+        </div>
+      </div>
+    )
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -89,6 +101,7 @@ export default function UploadFilmPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     setIsUploading(true)
 
     try {
@@ -110,10 +123,26 @@ export default function UploadFilmPage() {
       formDataToSend.append('duration', formData.duration)
       formDataToSend.append('releaseDate', formData.releaseDate || new Date().toISOString().split('T')[0])
       formDataToSend.append('price', formData.price)
+
       formDataToSend.append('filmFile', uploadedFiles.fullFilm)
 
       if (uploadedFiles.poster) {
         formDataToSend.append('thumbnailFile', uploadedFiles.poster)
+      }
+
+      // Add wallet address if available
+      if (address) {
+        formDataToSend.append('walletAddress', address)
+      }
+
+      // Debug: Log FormData being sent
+      console.log('Uploading film with the following data:')
+      for (let pair of formDataToSend.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(`${pair[0]}: [File] name=${pair[1].name}, size=${pair[1].size}`)
+        } else {
+          console.log(`${pair[0]}:`, pair[1])
+        }
       }
 
       // Simulate upload progress
@@ -123,16 +152,31 @@ export default function UploadFilmPage() {
       }
 
       // Upload to backend API
-      const response = await fetch('/api/films/upload', {
+      const response = await fetch('http://localhost:5000/api/films/upload', {
         method: 'POST',
         body: formDataToSend,
       })
 
-      if (!response.ok) {
-        throw new Error('Upload failed')
+      // Debug: Log response status
+      console.log('Upload response status:', response.status)
+      let result
+      try {
+        result = await response.clone().json()
+        console.log('Upload response JSON:', result)
+      } catch (err) {
+        result = null
+        const text = await response.text()
+        console.log('Upload response text:', text)
       }
 
-      const result = await response.json()
+      if (!response.ok) {
+        toast({
+          title: "Upload Failed",
+          description: result && result.error ? result.error : 'Upload failed',
+          variant: "destructive",
+        })
+        throw new Error('Upload failed')
+      }
 
       // Save film data to Firebase
       try {
@@ -189,7 +233,9 @@ export default function UploadFilmPage() {
             }
           ];
 
-          const ipfsHash = result.ipfsHash || ""; // Assuming backend returns IPFS hash of uploaded film
+
+          // Use the correct path for the IPFS hash from backend response
+          const ipfsHash = result.film?.ipfsHash || "";
 
           const txHash = await walletClient.writeContract({
             account: walletClient.account!,
