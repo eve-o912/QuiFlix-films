@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import {
   LineChart,
   Line,
@@ -15,64 +16,93 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { PriceDisplay } from "@/components/price-display"
+import { TrendingUp, DollarSign, Wallet, ArrowUpRight } from "lucide-react"
 
 export default function EarningsPage() {
-  // Mock data for charts
+  // Mock data for charts (in USDC)
   const revenueData = [
-    { month: "Jan", primary: 4000, royalties: 800 },
-    { month: "Feb", primary: 3000, royalties: 600 },
-    { month: "Mar", primary: 5000, royalties: 1000 },
-    { month: "Apr", primary: 4500, royalties: 900 },
-    { month: "May", primary: 6000, royalties: 1200 },
-    { month: "Jun", primary: 5500, royalties: 1100 },
+    { month: "Jan", nftSales: 2.133, directSales: 0.533, royalties: 0.427 },
+    { month: "Feb", nftSales: 1.600, directSales: 0.400, royalties: 0.320 },
+    { month: "Mar", nftSales: 2.667, directSales: 0.667, royalties: 0.533 },
+    { month: "Apr", nftSales: 2.400, directSales: 0.600, royalties: 0.480 },
+    { month: "May", nftSales: 3.200, directSales: 0.800, royalties: 0.640 },
+    { month: "Jun", nftSales: 2.933, directSales: 0.733, royalties: 0.587 },
   ]
 
   const revenueBreakdown = [
-    { name: "Primary Sales", value: 28000, color: "#D4AF37" },
-    { name: "Royalties", value: 5600, color: "#B8860B" },
-    { name: "Platform Fees", value: -3360, color: "#8B7355" },
+    { name: "NFT Sales", value: 14.933, color: "#D4AF37" },
+    { name: "Direct Sales", value: 3.733, color: "#4F46E5" },
+    { name: "Royalties", value: 2.987, color: "#B8860B" },
+    { name: "Platform Fees", value: -2.159, color: "#8B7355" },
   ]
 
   const transactions = [
     {
       id: 1,
-      type: "Primary Sale",
+      type: "NFT Sale",
       film: "Quantum Paradox",
-      amount: "$15.00",
-      crypto: "0.008 ETH",
+      amountUsdc: 0.008,
       date: "2024-01-15",
       wallet: "0x1234...5678",
+      buyer: "alice.eth"
     },
     {
       id: 2,
-      type: "Royalty",
+      type: "Direct Purchase",
       film: "Neon Dreams",
-      amount: "$1.20",
-      crypto: "0.0006 ETH",
-      date: "2024-01-14",
+      amountUsdc: 0.009,
+      date: "2024-01-15",
       wallet: "0x9876...4321",
+      buyer: "bob.eth"
     },
     {
       id: 3,
-      type: "Primary Sale",
+      type: "Royalty",
+      film: "Neon Dreams",
+      amountUsdc: 0.0006,
+      date: "2024-01-14",
+      wallet: "0x9876...4321",
+      buyer: "charlie.eth"
+    },
+    {
+      id: 4,
+      type: "NFT Sale",
       film: "Ocean Mystery",
-      amount: "$10.00",
-      crypto: "0.005 ETH",
+      amountUsdc: 0.005,
       date: "2024-01-14",
       wallet: "0x5555...7777",
+      buyer: "diana.eth"
+    },
+    {
+      id: 5,
+      type: "Direct Purchase",
+      film: "The Last Frontier",
+      amountUsdc: 0.015,
+      date: "2024-01-13",
+      wallet: "0x3333...9999",
+      buyer: "eve.eth"
     },
   ]
+
+  // Calculate totals
+  const totalNftSales = 14.933
+  const totalDirectSales = 3.733
+  const totalRoyalties = 2.987
+  const totalEarnings = totalNftSales + totalDirectSales + totalRoyalties
+  const platformFees = 2.159
+  const availableBalance = totalEarnings - platformFees
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Earnings</h1>
-          <p className="text-muted-foreground">Track your revenue from primary sales and royalties</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Earnings Dashboard</h1>
+          <p className="text-muted-foreground">Track revenue from NFT sales, direct purchases, and royalties</p>
         </div>
         <div className="flex gap-3">
-          <Select>
+          <Select defaultValue="6m">
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Last 6 months" />
             </SelectTrigger>
@@ -83,59 +113,96 @@ export default function EarningsPage() {
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button>Withdraw Funds</Button>
+          <Button>
+            <Wallet className="w-4 h-4 mr-2" />
+            Withdraw Funds
+          </Button>
         </div>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="border-l-4 border-l-primary">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Earnings</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Earnings</CardTitle>
+              <TrendingUp className="w-4 h-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">$30,240</div>
-            <p className="text-xs text-green-600 mt-1">+18% from last month</p>
+            <PriceDisplay usdcPrice={totalEarnings} size="lg" showToggle />
+            <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" />
+              +18% from last month
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Primary Sales</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">NFT Sales</CardTitle>
+              <DollarSign className="w-4 h-4 text-blue-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">$28,000</div>
-            <p className="text-xs text-muted-foreground mt-1">Direct ticket sales</p>
+            <PriceDisplay usdcPrice={totalNftSales} size="lg" showToggle />
+            <p className="text-xs text-muted-foreground mt-1">Primary NFT ticket sales</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-indigo-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Royalties</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Direct Sales</CardTitle>
+              <DollarSign className="w-4 h-4 text-indigo-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">$5,600</div>
-            <p className="text-xs text-muted-foreground mt-1">From resales</p>
+            <PriceDisplay usdcPrice={totalDirectSales} size="lg" showToggle />
+            <p className="text-xs text-muted-foreground mt-1">Direct purchase revenue</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-green-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Available Balance</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Royalties</CardTitle>
+              <TrendingUp className="w-4 h-4 text-green-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">$25,880</div>
-            <p className="text-xs text-muted-foreground mt-1">Ready to withdraw</p>
+            <PriceDisplay usdcPrice={totalRoyalties} size="lg" showToggle />
+            <p className="text-xs text-muted-foreground mt-1">From NFT resales</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Available Balance Card */}
+      <Card className="border-2 border-green-500/20 bg-green-500/5">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Available Balance</p>
+              <PriceDisplay usdcPrice={availableBalance} size="lg" showToggle className="text-green-600" />
+              <p className="text-xs text-muted-foreground mt-1">
+                After {((platformFees / totalEarnings) * 100).toFixed(1)}% platform fees
+              </p>
+            </div>
+            <Button size="lg" className="bg-green-600 hover:bg-green-700">
+              <Wallet className="w-4 h-4 mr-2" />
+              Withdraw Now
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Trend */}
         <Card>
           <CardHeader>
-            <CardTitle>Revenue Trend</CardTitle>
+            <CardTitle>Revenue Trend (USDC)</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -143,8 +210,9 @@ export default function EarningsPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="primary" stroke="#D4AF37" strokeWidth={2} name="Primary Sales" />
+                <Tooltip formatter={(value) => [`${Number(value).toFixed(4)} USDC`, ""]} />
+                <Line type="monotone" dataKey="nftSales" stroke="#D4AF37" strokeWidth={2} name="NFT Sales" />
+                <Line type="monotone" dataKey="directSales" stroke="#4F46E5" strokeWidth={2} name="Direct Sales" />
                 <Line type="monotone" dataKey="royalties" stroke="#B8860B" strokeWidth={2} name="Royalties" />
               </LineChart>
             </ResponsiveContainer>
@@ -172,7 +240,7 @@ export default function EarningsPage() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                 </Pie>
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                <Tooltip formatter={(value) => `${Number(value).toFixed(4)} USDC`} />
               </PieChart>
             </ResponsiveContainer>
             <div className="mt-4 space-y-2">
@@ -182,9 +250,10 @@ export default function EarningsPage() {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
                     <span>{item.name}</span>
                   </div>
-                  <span className={item.value < 0 ? "text-red-600" : "text-foreground"}>
-                    {item.value < 0 ? "-" : ""}${Math.abs(item.value).toLocaleString()}
-                  </span>
+                  <PriceDisplay 
+                    usdcPrice={Math.abs(item.value)} 
+                    className={item.value < 0 ? "text-red-600" : ""}
+                  />
                 </div>
               ))}
             </div>
@@ -195,33 +264,51 @@ export default function EarningsPage() {
       {/* Recent Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Transactions</CardTitle>
+            <Button variant="outline" size="sm">
+              <ArrowUpRight className="w-4 h-4 mr-2" />
+              View All
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {transactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between p-4 border border-border rounded-lg"
+                className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-4">
                   <div
                     className={`w-2 h-2 rounded-full ${
-                      transaction.type === "Primary Sale" ? "bg-primary" : "bg-green-500"
+                      transaction.type === "NFT Sale" 
+                        ? "bg-primary" 
+                        : transaction.type === "Direct Purchase"
+                        ? "bg-indigo-500"
+                        : "bg-green-500"
                     }`}
                   ></div>
                   <div>
-                    <p className="font-medium">{transaction.type}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{transaction.type}</p>
+                      <Badge 
+                        variant={transaction.type === "NFT Sale" ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {transaction.type === "NFT Sale" ? "NFT" : transaction.type === "Royalty" ? "10%" : "Direct"}
+                      </Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground">{transaction.film}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{transaction.amount}</p>
-                  <p className="text-sm text-muted-foreground">{transaction.crypto}</p>
+                  <PriceDisplay usdcPrice={transaction.amountUsdc} className="font-semibold" />
+                  <p className="text-xs text-muted-foreground mt-1">From {transaction.buyer}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">{transaction.date}</p>
-                  <p className="text-sm text-muted-foreground">{transaction.wallet}</p>
+                  <p className="text-xs text-muted-foreground">{transaction.wallet}</p>
                 </div>
               </div>
             ))}
@@ -236,26 +323,122 @@ export default function EarningsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border border-border rounded-lg">
-              <h3 className="font-medium mb-2">USDT Withdrawal</h3>
+            <div className="p-4 border border-border rounded-lg hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="font-medium">USDC Withdrawal</h3>
+              </div>
               <p className="text-sm text-muted-foreground mb-3">Withdraw to your connected wallet</p>
-              <Button className="w-full">Withdraw USDT</Button>
-            </div>
-            <div className="p-4 border border-border rounded-lg">
-              <h3 className="font-medium mb-2">USDC Withdrawal</h3>
-              <p className="text-sm text-muted-foreground mb-3">Withdraw to your connected wallet</p>
+              <div className="mb-3">
+                <PriceDisplay usdcPrice={availableBalance} showToggle />
+              </div>
               <Button className="w-full">Withdraw USDC</Button>
             </div>
-            <div className="p-4 border border-border rounded-lg">
-              <h3 className="font-medium mb-2">Bank Transfer</h3>
-              <p className="text-sm text-muted-foreground mb-3">Convert to fiat and transfer</p>
+            
+            <div className="p-4 border border-border rounded-lg hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="font-medium">USDT Withdrawal</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">Withdraw as Tether stablecoin</p>
+              <div className="mb-3">
+                <PriceDisplay usdcPrice={availableBalance} showToggle />
+              </div>
+              <Button className="w-full">Withdraw USDT</Button>
+            </div>
+            
+            <div className="p-4 border border-border rounded-lg hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                </div>
+                <h3 className="font-medium">M-Pesa Transfer</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">Convert to KES and send to M-Pesa</p>
+              <div className="mb-3">
+                <PriceDisplay usdcPrice={availableBalance} showToggle />
+              </div>
               <Button variant="outline" className="w-full bg-transparent">
-                Setup Bank Account
+                Setup M-Pesa
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Sales Comparison */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>NFT vs Direct Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">NFT Sales</span>
+                  <span className="text-sm text-muted-foreground">
+                    {((totalNftSales / (totalNftSales + totalDirectSales)) * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-3">
+                  <div 
+                    className="bg-primary h-3 rounded-full"
+                    style={{ width: `${(totalNftSales / (totalNftSales + totalDirectSales)) * 100}%` }}
+                  ></div>
+                </div>
+                <PriceDisplay usdcPrice={totalNftSales} className="mt-2" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Direct Sales</span>
+                  <span className="text-sm text-muted-foreground">
+                    {((totalDirectSales / (totalNftSales + totalDirectSales)) * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-3">
+                  <div 
+                    className="bg-indigo-500 h-3 rounded-full"
+                    style={{ width: `${(totalDirectSales / (totalNftSales + totalDirectSales)) * 100}%` }}
+                  ></div>
+                </div>
+                <PriceDisplay usdcPrice={totalDirectSales} className="mt-2" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Royalty Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total Royalties Earned</span>
+                <PriceDisplay usdcPrice={totalRoyalties} className="font-semibold text-green-600" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Average Royalty Rate</span>
+                <span className="font-semibold">10%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Secondary Sales Volume</span>
+                <PriceDisplay usdcPrice={totalRoyalties * 10} />
+              </div>
+              <div className="pt-4 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Royalties represent passive income from NFT resales on secondary markets
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
