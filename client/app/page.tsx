@@ -6,9 +6,42 @@ import { FilmCard } from "@/components/film-card"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { WalletsModal } from "@/modals/wallets"
 import { faqs } from "@/utils/faq"
-import { trendingFilms } from "@/utils/trending"
 import Image from "next/image"
 import { PageLayout } from "@/components/page-layout"
+
+// Updated trending films with USDC prices
+const trendingFilms = [
+  {
+    id: "1",
+    title: "Quantum Horizons",
+    year: 2024,
+    genre: "Sci-Fi",
+    rating: 8.9,
+    price: "25 USDC",
+    priceUSDC: 25,
+    poster: "/futuristic-sci-fi-movie-poster.jpg"
+  },
+  {
+    id: "2",
+    title: "The Last Symphony",
+    year: 2024,
+    genre: "Drama",
+    rating: 9.2,
+    price: "20 USDC",
+    priceUSDC: 20,
+    poster: "/dramatic-music-movie-poster.jpg"
+  },
+  {
+    id: "3",
+    title: "Ocean's Mystery",
+    year: 2024,
+    genre: "Adventure",
+    rating: 8.7,
+    price: "30 USDC",
+    priceUSDC: 30,
+    poster: "/ocean-adventure-movie-poster.jpg"
+  }
+]
 
 export default function LandingPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,7 +64,7 @@ export default function LandingPage() {
                         <span className="text-primary block">Experience</span>
                     </h1>
                     <p className="text-sm sm:text-base md:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto text-balance text-center">
-                        Stream premium films and own NFT tickets. No wallet? No problem. Buy directly and claim your NFT anytime.
+                        Stream premium films and own NFT tickets. Pay with Kenya Shillings or stablecoins. No wallet? No problem.
                     </p>
 
                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-base sm:text-lg px-6 sm:px-8 py-2 sm:py-3 shadow-lg" onClick={() => { window.location.href = '/films'; }}>
@@ -50,8 +83,8 @@ export default function LandingPage() {
                         <p className="text-muted-foreground">Own your movie experience with NFT tickets that prove your access and support for creators.</p>
                     </div>
                     <div className="bg-card rounded-lg p-8 shadow">
-                        <h3 className="text-xl font-semibold mb-2 text-primary">No Wallet? No Problem</h3>
-                        <p className="text-muted-foreground">Buy films directly with traditional payments and claim your NFT anytime—no crypto knowledge required.</p>
+                        <h3 className="text-xl font-semibold mb-2 text-primary">Flexible Payments</h3>
+                        <p className="text-muted-foreground">Pay with Kenya Shillings (KES), USDC, or USDT. Switch between currencies instantly with live conversion.</p>
                     </div>
                     <div className="bg-card rounded-lg p-8 shadow">
                         <h3 className="text-xl font-semibold mb-2 text-primary">Support Creators</h3>
@@ -60,13 +93,31 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Trending Section */}
+            {/* Trending Section with Currency Display */}
             <section className="relative z-10 w-full max-w-6xl mx-auto px-4 py-12 bg-background">
                 <h2 className="text-3xl font-bold mb-6 text-center text-primary">Trending Now</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
                     {trendingFilms.map(film => (
-                        <FilmCard key={film.id} title={film.title} poster={film.poster} id={""} year={0} genre={""} rating={0} price={""} />
+                        <FilmCard 
+                            key={film.id} 
+                            id={film.id}
+                            title={film.title} 
+                            year={film.year}
+                            genre={film.genre}
+                            rating={film.rating}
+                            price={film.price}
+                            priceUSDC={film.priceUSDC}
+                            poster={film.poster}
+                        />
                     ))}
+                </div>
+                <div className="text-center mt-8">
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Prices shown in your preferred currency. Click the refresh icon to toggle between KES and USDC.
+                    </p>
+                    <Button variant="outline" onClick={() => window.location.href = '/films'}>
+                        View All Films
+                    </Button>
                 </div>
             </section>
 
@@ -81,7 +132,7 @@ export default function LandingPage() {
                     </div>
                     <div className="bg-card rounded-lg p-6 shadow flex flex-col items-center">
                         <img src="/placeholder-user.jpg" alt="User 2" className="h-16 w-16 rounded-full mb-4" />
-                        <p className="italic mb-2">"I love that I can buy movies without a crypto wallet and claim my NFT later. Super simple!"</p>
+                        <p className="italic mb-2">"Being able to pay in Kenya Shillings is a game-changer! No more worrying about exchange rates."</p>
                         <span className="font-semibold text-primary">— Jamie L.</span>
                     </div>
                     <div className="bg-card rounded-lg p-6 shadow flex flex-col items-center">
@@ -102,6 +153,21 @@ export default function LandingPage() {
                             <AccordionContent>{faq.answer}</AccordionContent>
                         </AccordionItem>
                     ))}
+                    {/* Add currency-related FAQ */}
+                    <AccordionItem value="currency">
+                        <AccordionTrigger>What currencies can I use?</AccordionTrigger>
+                        <AccordionContent>
+                            QuiFlix supports Kenya Shillings (KES), USDC, and USDT. You can switch between currencies at any time, 
+                            and we'll show you the live conversion rate. Your preferred currency is saved for future visits.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="exchange-rate">
+                        <AccordionTrigger>How is the exchange rate calculated?</AccordionTrigger>
+                        <AccordionContent>
+                            We use real-time exchange rates for KES to USDC/USDT conversions. The current rate is approximately 
+                            1 USDC = 129.5 KES. Rates are updated regularly to ensure fair pricing.
+                        </AccordionContent>
+                    </AccordionItem>
                 </Accordion>
             </section>
 
@@ -118,6 +184,7 @@ export default function LandingPage() {
                     <span className="font-bold text-lg">QuiFlix</span>
                 </div>
                 <div className="text-xs">&copy; {new Date().getFullYear()} QuiFlix. All rights reserved.</div>
+                <div className="text-xs mt-2">Prices in KES, USDC, and USDT supported</div>
             </footer>
         </PageLayout>
     )
