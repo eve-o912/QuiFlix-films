@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Play, Download, ExternalLink, Receipt, Calendar, Copy, Eye, EyeOff } from "lucide-react"
+import { Play, Download, ExternalLink, Receipt, Calendar, Copy, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { PriceDisplay } from "@/components/price-display"
+import { getPreferredCurrency, setPreferredCurrency, convertUSDCtoKES } from "@/lib/currency"
 
 const ownedNFTs = [
   {
@@ -22,6 +24,7 @@ const ownedNFTs = [
     contractAddress: "0x1234...5678",
     purchaseDate: "2024-03-15",
     purchasePrice: "0.03 ETH",
+    purchasePriceUSDC: 15, // Added for conversion
   },
 ]
 
@@ -30,6 +33,7 @@ const purchaseHistory = [
     id: "USDT_1710518400000",
     filmTitle: "The Last Symphony",
     price: "15 USDT",
+    priceUSDC: 15,
     date: "2024-03-15",
     status: "completed",
     paymentMethod: "usdt",
@@ -40,6 +44,7 @@ const purchaseHistory = [
     id: "USDC_1710432000000",
     filmTitle: "Quantum Horizons",
     price: "25 USDC",
+    priceUSDC: 25,
     date: "2024-03-14",
     status: "completed",
     paymentMethod: "usdc",
@@ -54,6 +59,11 @@ const claimableOrders = purchaseHistory.filter((order) => !order.hasNFT && order
 export default function AccountPage() {
   const [showTokens, setShowTokens] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [displayCurrency, setDisplayCurrency] = useState<'KES' | 'USDC'>(() => getPreferredCurrency())
+
+  // Calculate total spent in selected currency
+  const totalSpentUSDC = purchaseHistory.reduce((sum, order) => sum + order.priceUSDC, 0)
+  const totalSpentKES = convertUSDCtoKES(totalSpentUSDC)
 
   const handlePlay = (film: any) => {
     console.log("Playing:", film.title)
@@ -61,7 +71,6 @@ export default function AccountPage() {
 
   const handleClaim = async (walletAddress: string) => {
     console.log("Claiming NFT to wallet:", walletAddress)
-    // Simulate claim process
     await new Promise((resolve) => setTimeout(resolve, 2000))
   }
 
@@ -75,15 +84,36 @@ export default function AccountPage() {
     console.log("Downloading receipt for:", orderId)
   }
 
+  const toggleDisplayCurrency = () => {
+    const newCurrency = displayCurrency === 'KES' ? 'USDC' : 'KES'
+    setDisplayCurrency(newCurrency)
+    setPreferredCurrency(newCurrency)
+  }
+
   return (
     <div className="min-h-screen bg-background">
-    
-
       <div className="container px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">My Account</h1>
-          <p className="text-muted-foreground text-lg">Manage your films, NFTs, and purchase history</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">My Account</h1>
+              <p className="text-muted-foreground text-lg">Manage your films, NFTs, and purchase history</p>
+            </div>
+            {/* Global Currency Toggle */}
+            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border">
+              <span className="text-sm text-muted-foreground">Display Currency:</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleDisplayCurrency}
+                className="h-8 px-3 gap-1"
+              >
+                <span className="font-semibold">{displayCurrency}</span>
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Account Stats */}
@@ -108,8 +138,14 @@ export default function AccountPage() {
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-primary">40</div>
-              <div className="text-sm text-muted-foreground">Total Spent</div>
+              <PriceDisplay 
+                amount={totalSpentUSDC} 
+                currency="USDC" 
+                showToggle={false}
+                size="lg"
+                className="justify-center"
+              />
+              <div className="text-sm text-muted-foreground mt-1">Total Spent</div>
             </CardContent>
           </Card>
         </div>
@@ -157,9 +193,14 @@ export default function AccountPage() {
                           <span className="text-muted-foreground">Token ID</span>
                           <span className="font-mono">#{nft.tokenId}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Purchase Price</span>
-                          <span>{nft.purchasePrice}</span>
+                          <PriceDisplay 
+                            amount={nft.purchasePriceUSDC} 
+                            currency="USDC" 
+                            showToggle={false}
+                            size="sm"
+                          />
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Purchase Date</span>
@@ -256,7 +297,12 @@ export default function AccountPage() {
                                 ? "USDC"
                                 : order.paymentMethod}
                           </span>
-                          <span className="font-semibold text-foreground">{order.price}</span>
+                          <PriceDisplay 
+                            amount={order.priceUSDC} 
+                            currency="USDC" 
+                            showToggle={false}
+                            size="sm"
+                          />
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">Order ID:</span>
@@ -314,6 +360,49 @@ export default function AccountPage() {
             <h2 className="text-2xl font-bold">Account Settings</h2>
 
             <div className="space-y-6">
+              {/* Currency Preference */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Currency Preferences</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Display Currency</p>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your preferred currency for displaying prices
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={displayCurrency === 'KES' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setDisplayCurrency('KES')
+                          setPreferredCurrency('KES')
+                        }}
+                      >
+                        KES
+                      </Button>
+                      <Button
+                        variant={displayCurrency === 'USDC' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setDisplayCurrency('USDC')
+                          setPreferredCurrency('USDC')
+                        }}
+                      >
+                        USDC
+                      </Button>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="text-sm text-muted-foreground">
+                    Current exchange rate: 1 USDC ≈ KES 129.50
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Profile Settings */}
               <Card>
                 <CardHeader>
