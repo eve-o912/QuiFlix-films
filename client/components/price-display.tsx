@@ -1,295 +1,98 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Wallet, DollarSign, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { CheckoutSuccess } from "@/components/checkout-success"
-import { useCustodialWallet } from "@/hooks/useCustodialWallet"
-import { PriceDisplay } from "@/components/price-display"
-import { getPreferredCurrency, setPreferredCurrency } from "@/lib/currency"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Info, RefreshCw } from "lucide-react"
+import { getPricing, formatPrice, getPreferredCurrency, setPreferredCurrency } from "@/lib/currency"
 
-interface CheckoutModalProps {
-  isOpen: boolean
-  onClose: () => void
-  filmTitle: string
-  price: string
-  priceUSDC?: number
-  filmId: string
-  purchaseType?: "nft" | "direct"
+interface PriceDisplayProps {
+  amount: number
+  currency: 'KES' | 'USDC' | 'USDT'
+  showToggle?: boolean
+  className?: string
+  size?: 'sm' | 'md' | 'lg'
 }
 
-type CheckoutStep = "payment-method" | "stablecoin-selection" | "wallet" | "success"
-
-export function CheckoutModal({ 
-  isOpen, 
-  onClose, 
-  filmTitle, 
-  price, 
-  priceUSDC = 25,
-  filmId, 
-  purchaseType = "nft" 
-}: CheckoutModalProps) {
-  const { address, formatAddress, sendTransaction } = useCustodialWallet()
-  const [currentStep, setCurrentStep] = useState<CheckoutStep>("payment-method")
-  const [selectedStablecoin, setSelectedStablecoin] = useState<"usdt" | "usdc" | null>(null)
-  const [displayCurrency, setDisplayCurrency] = useState<'KES' | 'USDC'>('USDC')
-  const [orderData, setOrderData] = useState<any>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-
-  // Load preferred currency on mount
+export function PriceDisplay({ 
+  amount, 
+  currency, 
+  showToggle = false,
+  className = "",
+  size = 'md'
+}: PriceDisplayProps) {
+  // Use user's preferred currency or default to the passed currency
+  const [displayCurrency, setDisplayCurrency] = useState<'KES' | 'USDC'>(currency as 'KES' | 'USDC')
+  
+  // Load preferred currency on mount (client-side only)
   useEffect(() => {
-    const preferred = getPreferredCurrency()
-    setDisplayCurrency(preferred)
-  }, [])
+    if (showToggle) {
+      const preferred = getPreferredCurrency()
+      setDisplayCurrency(preferred)
+    }
+  }, [showToggle])
 
-  const handleClose = () => {
-    setCurrentStep("payment-method")
-    setSelectedStablecoin(null)
-    setOrderData(null)
-    setIsProcessing(false)
-    onClose()
-  }
+  const pricing = getPricing(amount, currency)
 
-  const handlePaymentMethodSelect = (method: "wallet") => {
-    console.log("[v0] Payment method selected:", method, "for purchase type:", purchaseType)
-    setCurrentStep("stablecoin-selection")
-  }
-
-  const handleStablecoinSelect = (coin: "usdt" | "usdc") => {
-    console.log("[v0] Stablecoin selected:", coin)
-    setSelectedStablecoin(coin)
-    setCurrentStep("wallet")
-  }
-
-  const toggleDisplayCurrency = () => {
+  const toggleCurrency = () => {
     const newCurrency = displayCurrency === 'KES' ? 'USDC' : 'KES'
     setDisplayCurrency(newCurrency)
     setPreferredCurrency(newCurrency)
   }
 
-  const handleWalletPayment = async () => {
-    console.log("[v0] Processing", selectedStablecoin?.toUpperCase(), "payment for:", filmTitle, "using custodial wallet:", address)
-    setIsProcessing(true)
-    try {
-      // Call backend API to purchase film
-      const response = await fetch('/api/films/purchase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filmId: filmId,
-          paymentCurrency: selectedStablecoin?.toUpperCase(),
-          displayCurrency: displayCurrency,
-        }),
-      })
+  const displayAmount = displayCurrency === 'KES' ? pricing.kes : pricing.usdc
+  const alternateAmount = displayCurrency === 'KES' ? pricing.usdc : pricing.kes
+  const alternateCurrency = displayCurrency === 'KES' ? 'USDC' : 'KES'
 
-      if (!response.ok) {
-        throw new Error('Purchase failed')
-      }
-
-      const purchaseData = await response.json()
-
-      const walletOrderData = {
-        orderId: `NFT_${purchaseData.purchase.tokenId}_${Date.now()}`,
-        filmTitle,
-        price,
-        priceUSDC,
-        email: address,
-        paymentMethod: selectedStablecoin,
-        purchaseType,
-        claimNFT: purchaseType === "nft",
-        status: "completed",
-        accessToken: `ACCESS_${purchaseData.purchase.tokenId}`,
-        claimVoucher: purchaseType === "direct" ? `VOUCHER_${purchaseData.purchase.tokenId}` : null,
-        walletAddress: address,
-        tokenId: purchaseData.purchase.tokenId,
-        txHash: purchaseData.purchase.txHash,
-      }
-
-      console.log("[v0] Custodial wallet payment completed:", walletOrderData)
-      setOrderData(walletOrderData)
-      setCurrentStep("success")
-    } catch (error) {
-      console.error("[v0] Custodial wallet payment failed:", error)
-    } finally {
-      setIsProcessing(false)
-    }
+  // Size variants
+  const sizeClasses = {
+    sm: 'text-sm',
+    md: 'text-base',
+    lg: 'text-lg'
   }
 
-  const handleWatchNow = () => {
-    console.log("[v0] Redirecting to player with access token:", orderData?.accessToken)
-    window.location.href = `/watch/${filmId}?token=${orderData?.accessToken}`
-    handleClose()
-  }
-
-  const handleClaimNFT = () => {
-    console.log("[v0] Opening claim NFT flow for voucher:", orderData?.claimVoucher)
-    window.location.href = `/claim?voucher=${orderData?.claimVoucher}`
-    handleClose()
+  const iconSizes = {
+    sm: 'h-3 w-3',
+    md: 'h-3.5 w-3.5',
+    lg: 'h-4 w-4'
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {currentStep === "payment-method" && (
-              <div>
-                <h3 className="text-lg font-semibold">Buy ticket — {filmTitle}</h3>
-                <p className="text-sm text-muted-foreground">Pay with stablecoins (USDT/USDC)</p>
-              </div>
+    <div className={`flex items-center gap-2 ${className}`}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1 cursor-help">
+              <span className={`font-bold ${sizeClasses[size]}`}>
+                {formatPrice(displayAmount, displayCurrency)}
+              </span>
+              <Info className={`${iconSizes[size]} text-muted-foreground opacity-70`} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="bg-popover text-popover-foreground">
+            <p className="text-xs">
+              ≈ {formatPrice(alternateAmount, alternateCurrency)}
+            </p>
+            {showToggle && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Click <RefreshCw className="h-2.5 w-2.5 inline" /> to toggle
+              </p>
             )}
-            {currentStep === "stablecoin-selection" && "Choose Stablecoin"}
-            {currentStep === "wallet" && "Connect Wallet"}
-            {currentStep === "success" && "Purchase Complete"}
-          </DialogTitle>
-        </DialogHeader>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-        <div className="space-y-4">
-          {/* Currency Toggle - Show on all steps except success */}
-          {currentStep !== "success" && (
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Display Currency:</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleDisplayCurrency}
-                  className="h-7 px-3 gap-1"
-                >
-                  <span className="font-semibold">{displayCurrency}</span>
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Order Summary - Show on all steps except success */}
-          {currentStep !== "success" && (
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <span className="font-medium">{filmTitle}</span>
-              <PriceDisplay 
-                amount={priceUSDC} 
-                currency="USDC" 
-                showToggle={false}
-                size="md"
-              />
-            </div>
-          )}
-
-          {/* Payment Method Selection */}
-          {currentStep === "payment-method" && (
-            <div className="space-y-3">
-              <h4 className="font-medium">Payment Method</h4>
-
-              <Card
-                className="cursor-pointer hover:bg-accent transition-colors"
-                onClick={() => handlePaymentMethodSelect("wallet")}
-              >
-                <CardContent className="flex items-center p-4">
-                  <Wallet className="h-5 w-5 mr-3 text-primary" />
-                  <div className="flex-1">
-                    <div className="font-medium">Crypto Wallet (Stablecoins Only)</div>
-                    <div className="text-sm text-muted-foreground">
-                      Pay with USDT or USDC - stable, reliable payments
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Stablecoin Selection */}
-          {currentStep === "stablecoin-selection" && (
-            <div className="space-y-3">
-              <Button onClick={() => setCurrentStep("payment-method")} variant="ghost" size="sm" className="mb-2">
-                ← Back to payment method
-              </Button>
-
-              <h4 className="font-medium">Select Stablecoin</h4>
-
-              <Card
-                className="cursor-pointer hover:bg-accent transition-colors"
-                onClick={() => handleStablecoinSelect("usdt")}
-              >
-                <CardContent className="flex items-center p-4">
-                  <DollarSign className="h-5 w-5 mr-3 text-green-500" />
-                  <div className="flex-1">
-                    <div className="font-medium">USDT (Tether)</div>
-                    <div className="text-sm text-muted-foreground">Most widely used stablecoin, 1:1 USD backed</div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover:bg-accent transition-colors"
-                onClick={() => handleStablecoinSelect("usdc")}
-              >
-                <CardContent className="flex items-center p-4">
-                  <DollarSign className="h-5 w-5 mr-3 text-blue-500" />
-                  <div className="flex-1">
-                    <div className="font-medium">USDC (USD Coin)</div>
-                    <div className="text-sm text-muted-foreground">
-                      Regulated stablecoin by Coinbase, fully backed by USD
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Wallet Payment */}
-          {currentStep === "wallet" && selectedStablecoin && (
-            <div className="space-y-4">
-              <Button onClick={() => setCurrentStep("stablecoin-selection")} variant="ghost" size="sm" className="mb-2">
-                ← Back to stablecoin selection
-              </Button>
-
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium mb-2">Custodial Wallet Payment</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Your custodial wallet will be used to pay with {selectedStablecoin.toUpperCase()} and{" "}
-                  {purchaseType === "nft" ? "own this NFT ticket instantly" : "get streaming access"}.
-                </p>
-                <div className="mb-4 p-3 bg-background rounded border">
-                  <div className="text-xs text-muted-foreground mb-1">Your Wallet</div>
-                  <div className="font-mono text-sm">{formatAddress(address!)}</div>
-                </div>
-                <div className="flex items-center gap-2 mb-4 p-3 bg-background rounded border">
-                  <DollarSign
-                    className={`h-4 w-4 ${selectedStablecoin === "usdt" ? "text-green-500" : "text-blue-500"}`}
-                  />
-                  <span className="text-sm font-medium mr-2">
-                    Paying with {selectedStablecoin.toUpperCase()}:
-                  </span>
-                  <PriceDisplay 
-                    amount={priceUSDC} 
-                    currency="USDC" 
-                    showToggle={false}
-                    size="sm"
-                  />
-                </div>
-                <Button
-                  onClick={handleWalletPayment}
-                  disabled={isProcessing}
-                  className="w-full bg-primary hover:bg-primary/90"
-                >
-                  {isProcessing ? "Processing..." : `Pay with ${selectedStablecoin.toUpperCase()}`}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Success */}
-          {currentStep === "success" && orderData && (
-            <CheckoutSuccess orderData={orderData} onWatchNow={handleWatchNow} onClaimNFT={handleClaimNFT} />
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+      {showToggle && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleCurrency}
+          className="h-6 w-6 p-0 hover:bg-accent"
+          title={`Switch to ${alternateCurrency}`}
+        >
+          <RefreshCw className={iconSizes[size]} />
+        </Button>
+      )}
+    </div>
   )
 }
