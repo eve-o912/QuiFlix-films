@@ -1,258 +1,356 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState, useEffect } from "react"
+import { CheckoutModal } from "@/components/checkout-modal"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { Badge } from "@/components/ui/badge"
+import { Search, Grid, List } from "lucide-react"
+import { db } from "@/firebase/firebase"
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
+import { useAuth } from "@/hooks/useAuth"
 
-export default function AudiencePage() {
-  // Mock data for charts
-  const countryData = [
-    { country: "United States", viewers: 1200, percentage: 22 },
-    { country: "United Kingdom", viewers: 800, percentage: 15 },
-    { country: "Canada", viewers: 650, percentage: 12 },
-    { country: "Germany", viewers: 500, percentage: 9 },
-    { country: "Japan", viewers: 450, percentage: 8 },
-    { country: "Others", viewers: 1800, percentage: 34 },
-  ]
+// Film interface
+interface Film {
+  id: string
+  title: string
+  year?: number
+  genre: string
+  rating?: number
+  price: string
+  poster: string
+  owned: boolean
+  description: string
+  creatorId?: string
+  status?: string
+}
 
-  const walletTypeData = [
-    { name: "New Buyers", value: 3200, color: "#D4AF37" },
-    { name: "Returning Buyers", value: 2200, color: "#B8860B" },
-  ]
+const genres = ["All", "Sci-Fi", "Drama", "Action", "Thriller", "Adventure", "Mystery", "Horror"]
+const sortOptions = [
+  { value: "rating", label: "Rating" },
+  { value: "year", label: "Year" },
+  { value: "price", label: "Price" },
+  { value: "title", label: "Title" },
+]
 
-  const engagementData = [
-    { film: "Quantum Paradox", avgWatch: 105, rating: 4.8, likes: 890 },
-    { film: "Neon Dreams", avgWatch: 132, rating: 4.6, likes: 420 },
-    { film: "Ocean Mystery", avgWatch: 118, rating: 4.9, likes: 1200 },
-  ]
+export default function FilmsPage() {
+  const { currentUser } = useAuth()
+  const [films, setFilms] = useState<Film[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedGenre, setSelectedGenre] = useState("All")
+  const [sortBy, setSortBy] = useState("rating")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [checkoutModal, setCheckoutModal] = useState<{
+    isOpen: boolean
+    filmTitle: string
+    price: string
+    filmId: string
+    purchaseType: "nft" | "direct"
+  }>({
+    isOpen: false,
+    filmTitle: "",
+    price: "",
+    filmId: "",
+    purchaseType: "nft",
+  })
 
-  const fanTiers = [
-    {
-      tier: "Super Collectors",
-      count: 85,
-      description: "Own 5+ NFT tickets",
-      avgSpend: "$125",
-      color: "bg-primary",
-    },
-    {
-      tier: "Regular Fans",
-      count: 320,
-      description: "Own 2-4 NFT tickets",
-      avgSpend: "$45",
-      color: "bg-secondary",
-    },
-    {
-      tier: "One-time Viewers",
-      count: 4995,
-      description: "Own 1 NFT ticket",
-      avgSpend: "$15",
-      color: "bg-muted",
-    },
-  ]
+  // Fetch films from Firestore
+  useEffect(() => {
+    const fetchFilms = async () => {
+      try {
+        // Only fetch approved films
+        const q = query(
+          collection(db, 'films'),
+          where('status', '==', 'approved'),
+          orderBy('createdAt', 'desc')
+        )
+        const querySnapshot = await getDocs(q)
+        const filmsData: Film[] = []
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data()
+          filmsData.push({
+            id: doc.id,
+            title: data.title,
+            year: data.releaseDate ? new Date(data.releaseDate).getFullYear() : undefined,
+            genre: data.genre,
+            rating: 8.5, // Default rating, could be calculated from reviews
+            price: `${data.price} ETH`,
+            poster: data.posterUrl || "/placeholder.svg",
+            owned: false, // TODO: Check if user owns this NFT
+            description: data.description,
+            creatorId: data.creatorId,
+            status: data.status,
+          })
+        })
+
+        setFilms(filmsData)
+      } catch (error) {
+        console.error('Error fetching films:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFilms()
+  }, [])
+
+  const filteredFilms = films
+    .filter((film: Film) => {
+      const matchesSearch =
+        film.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        film.genre.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesGenre = selectedGenre === "All" || film.genre === selectedGenre
+      return matchesSearch && matchesGenre
+    })
+    .sort((a: Film, b: Film) => {
+      switch (sortBy) {
+        case "rating":
+          return (b.rating || 0) - (a.rating || 0)
+        case "year":
+          return (b.year || 0) - (a.year || 0)
+        case "price":
+          return Number.parseFloat(a.price) - Number.parseFloat(b.price)
+        case "title":
+          return a.title.localeCompare(b.title)
+        default:
+          return 0
+      }
+    })
+
+  const handleBuyNFT = (film: Film) => {
+    console.log("[v0] NFT purchase initiated for:", film.title)
+    setCheckoutModal({
+      isOpen: true,
+      filmTitle: film.title,
+      price: film.price,
+      filmId: film.id,
+      purchaseType: "nft",
+    })
+  }
+
+  const handleBuyDirect = (film: Film) => {
+    console.log("[v0] Direct purchase initiated for:", film.title)
+    setCheckoutModal({
+      isOpen: true,
+      filmTitle: film.title,
+      price: film.price,
+      filmId: film.id,
+      purchaseType: "direct",
+    })
+  }
+
+  const handlePlay = (film: Film) => {
+    console.log("[v0] Playing film:", film.title)
+    // TODO: Navigate to video player with film ID
+    window.location.href = `/watch/${film.id}`
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Audience Insights</h1>
-          <p className="text-muted-foreground">Understand your viewers and their engagement patterns</p>
+    <div className="min-h-screen bg-background">
+      <div className="container px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+        {/* Page Header */}
+        <div className="mb-6 sm:mb-8 text-center">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Browse Films</h1>
+          <p className="text-muted-foreground text-sm sm:text-base md:text-lg">Discover premium films and own your viewing experience</p>
         </div>
-        <Select>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Last 6 months" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1m">Last month</SelectItem>
-            <SelectItem value="3m">Last 3 months</SelectItem>
-            <SelectItem value="6m">Last 6 months</SelectItem>
-            <SelectItem value="1y">Last year</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Viewers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">5,400</div>
-            <p className="text-xs text-green-600 mt-1">+12% from last month</p>
-          </CardContent>
-        </Card>
+        {/* Search Bar - Centered */}
+        <div className="py-4 sm:py-6 md:py-8 mb-4 sm:mb-6 flex justify-center">
+          <div className="relative w-full max-w-2xl px-2 sm:px-0">
+            <Search className="absolute left-4 sm:left-6 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
+            <Input
+              placeholder="Search films, genres..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 sm:pl-12 pr-4 py-2 sm:py-3 rounded-3xl text-center placeholder:text-center border-2 focus:border-primary text-sm sm:text-base"
+            />
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Unique Wallets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">4,850</div>
-            <p className="text-xs text-muted-foreground mt-1">Connected wallets</p>
-          </CardContent>
-        </Card>
+        {/* Filters and Controls */}
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-end">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-3 items-center justify-center lg:justify-end">
+              {/* Genre Filter */}
+              <div className="flex gap-2 flex-wrap justify-center">
+                {genres.map((genre) => (
+                  <Badge
+                    key={genre}
+                    variant={selectedGenre === genre ? "default" : "outline"}
+                    className={`cursor-pointer transition-colors text-xs px-3 py-1 ${
+                      selectedGenre === genre ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                    }`}
+                    onClick={() => setSelectedGenre(genre)}
+                  >
+                    {genre}
+                  </Badge>
+                ))}
+              </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Watch Time</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">1h 52m</div>
-            <p className="text-xs text-green-600 mt-1">+8 min from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Retention Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">68%</div>
-            <p className="text-xs text-muted-foreground mt-1">Return viewers</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Geographic Distribution & Wallet Types */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Countries */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Countries</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={countryData} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="country" type="category" width={80} />
-                <Tooltip />
-                <Bar dataKey="viewers" fill="#D4AF37" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Wallet Types */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Wallet Types</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={walletTypeData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
-                  {walletTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+              {/* Sort */}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
                   ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value.toLocaleString()} viewers`} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
-              {walletTypeData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                    <span>{item.name}</span>
-                  </div>
-                  <span>{item.value.toLocaleString()}</span>
-                </div>
-              ))}
+                </SelectContent>
+              </Select>
+
+              {/* View Mode */}
+              <div className="flex border rounded-lg">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-r-none"
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-l-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Results Count */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-muted-foreground text-center sm:text-left">
+              {filteredFilms.length} film{filteredFilms.length !== 1 ? "s" : ""} found
+            </p>
+            {(searchQuery || selectedGenre !== "All") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("")
+                  setSelectedGenre("All")
+                }}
+                className="text-xs"
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🎬</div>
+            <h3 className="text-xl font-semibold mb-2">Loading films...</h3>
+            <p className="text-muted-foreground">Please wait while we fetch the latest content</p>
+          </div>
+        )}
+
+        {/* Films Grid/List */}
+        {!loading && viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredFilms.map((film) => (
+              <div 
+                key={film.id} 
+                className="group cursor-pointer bg-card rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
+                onClick={() => film.owned ? handlePlay(film) : handleBuyNFT(film)}
+              >
+                <div className="aspect-[3/2] overflow-hidden">
+                  <img
+                    src={film.poster || "/placeholder.svg"}
+                    alt={film.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  />
+                </div>
+                <div className="p-4 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <h3 className="font-semibold text-lg leading-tight truncate flex-1 mr-2">{film.title}</h3>
+                    {film.owned && <Badge className="bg-primary text-xs flex-shrink-0">Owned</Badge>}
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{film.genre}</span>
+                    <span className="flex items-center gap-1">
+                      ⭐ {film.rating}
+                    </span>
+                  </div>
+                  {!film.owned && (
+                    <div className="pt-1">
+                      <span className="text-primary font-medium">{film.price}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !loading && (
+          <div className="space-y-3 sm:space-y-4">
+            {filteredFilms.map((film) => (
+              <div 
+                key={film.id} 
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                onClick={() => film.owned ? handlePlay(film) : handleBuyNFT(film)}
+              >
+                <img
+                  src={film.poster || "/placeholder.svg"}
+                  alt={film.title}
+                  className="w-full sm:w-20 md:w-24 h-32 sm:h-24 md:h-28 object-cover rounded mx-auto sm:mx-0"
+                />
+                <div className="flex-1 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div className="text-center sm:text-left">
+                      <h3 className="font-semibold text-base sm:text-lg">{film.title}</h3>
+                      <p className="text-muted-foreground text-sm">
+                        {film.genre} • ⭐ {film.rating}
+                      </p>
+                      {!film.owned && (
+                        <p className="text-primary font-medium text-sm mt-1">{film.price}</p>
+                      )}
+                    </div>
+                    {film.owned && <Badge className="bg-primary self-center sm:self-start">Owned</Badge>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* No Results */}
+        {filteredFilms.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🎬</div>
+            <h3 className="text-xl font-semibold mb-2">No films found</h3>
+            <p className="text-muted-foreground mb-4">Try adjusting your search or filter criteria</p>
+            <Button
+              onClick={() => {
+                setSearchQuery("")
+                setSelectedGenre("All")
+              }}
+            >
+              Clear all filters
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Fan Tiers */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Fan Tiers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {fanTiers.map((tier, index) => (
-              <div key={index} className="text-center">
-                <div className={`w-16 h-16 ${tier.color} rounded-full flex items-center justify-center mx-auto mb-4`}>
-                  <span className="text-2xl font-bold text-background">{tier.count}</span>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">{tier.tier}</h3>
-                <p className="text-sm text-muted-foreground mb-2">{tier.description}</p>
-                <Badge variant="outline">Avg Spend: {tier.avgSpend}</Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Engagement by Film */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Engagement by Film</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {engagementData.map((film, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                <div>
-                  <h3 className="font-medium">{film.film}</h3>
-                  <p className="text-sm text-muted-foreground">Average watch time: {film.avgWatch} minutes</p>
-                </div>
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="text-center">
-                    <p className="font-medium">{film.rating}</p>
-                    <p className="text-muted-foreground">Rating</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-medium">{film.likes}</p>
-                    <p className="text-muted-foreground">Likes</p>
-                  </div>
-                  <div className="w-32 bg-secondary rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full"
-                      style={{ width: `${(film.avgWatch / 150) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Top Collectors */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Collectors</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[
-              {
-                wallet: "0x1234...5678",
-                tickets: 12,
-                spent: "$180",
-                films: ["Quantum Paradox", "Neon Dreams", "Ocean Mystery"],
-              },
-              { wallet: "0x9876...4321", tickets: 8, spent: "$120", films: ["Quantum Paradox", "Ocean Mystery"] },
-              { wallet: "0x5555...7777", tickets: 6, spent: "$90", films: ["Neon Dreams", "Ocean Mystery"] },
-            ].map((collector, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                <div>
-                  <p className="font-medium">{collector.wallet}</p>
-                  <p className="text-sm text-muted-foreground">{collector.films.join(", ")}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">{collector.tickets} tickets</p>
-                  <p className="text-sm text-muted-foreground">{collector.spent} spent</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <CheckoutModal
+        isOpen={checkoutModal.isOpen}
+        onClose={() => setCheckoutModal({ ...checkoutModal, isOpen: false })}
+        filmTitle={checkoutModal.filmTitle}
+        price={checkoutModal.price}
+        filmId={checkoutModal.filmId}
+        purchaseType={checkoutModal.purchaseType}
+      />
     </div>
   )
 }
