@@ -1,345 +1,491 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { Header } from "@/components/header"
+import { ClaimWidget } from "@/components/claim-widget"
 import { Button } from "@/components/ui/button"
-import { 
-  Wallet, 
-  Film, 
-  TrendingUp, 
-  Gift, 
-  Plus,
-  Eye,
-  Star,
-  Clock,
-  Users,
-  Coins,
-  Trophy,
-  PlayCircle,
-  ShoppingCart
-} from "lucide-react"
-import { PageLayout } from "@/components/page-layout"
-import { OnboardingTutorial } from "@/components/onboarding-tutorial"
-import { useAuth } from "@/hooks/useAuth"
-import { useWalletData } from "@/hooks/useWalletData"
-import { useWeb3 } from "@/hooks/useWeb3"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
+import { Play, Download, ExternalLink, Receipt, Calendar, Copy, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { PriceDisplay } from "@/components/price-display"
+import { getPreferredCurrency, setPreferredCurrency, convertUSDCtoKES } from "@/lib/currency"
 
-// Mock user data - in real app this would come from API
-
-const quickActions = [
-  {
-    title: "Browse Films",
-    description: "Discover amazing content",
-    icon: <Film className="h-6 w-6" />,
-    href: "/films",
-    color: "bg-gray-800"
-  },
-  {
-    title: "Add Funds",
-    description: "Top up your wallet",
-    icon: <Plus className="h-6 w-6" />,
-    href: "/account?tab=wallet",
-    color: "bg-gray-800"
-  },
-  {
-    title: "Watch & Earn",
-    description: "Start earning rewards",
-    icon: <PlayCircle className="h-6 w-6" />,
-    href: "/films",
-    color: "bg-gray-800"
-  },
-  {
-    title: "Claim NFTs",
-    description: "Convert purchases to NFTs",
-    icon: <Gift className="h-6 w-6" />,
-    href: "/claim",
-    color: "bg-gray-800"
-  }
-]
-
-const trendingFilms = [
+const ownedNFTs = [
   {
     id: "1",
-    title: "Quantum Horizons",
-    genre: "Sci-Fi",
-    price: "25 USDT",
-    rating: 8.9,
-    poster: "/futuristic-sci-fi-movie-poster.jpg",
-    isNew: true
-  },
-  {
-    id: "2", 
     title: "The Last Symphony",
+    year: 2024,
     genre: "Drama",
-    price: "20 USDT",
     rating: 9.2,
     poster: "/dramatic-music-movie-poster.jpg",
-    isHot: true
+    tokenId: "42",
+    contractAddress: "0x1234...5678",
+    purchaseDate: "2024-03-15",
+    purchasePrice: "0.03 ETH",
+    purchasePriceUSDC: 15, // Added for conversion
   },
-  {
-    id: "3",
-    title: "Ocean's Mystery",
-    genre: "Adventure", 
-    price: "30 USDT",
-    rating: 8.7,
-    poster: "/ocean-adventure-movie-poster.jpg",
-    isTrending: true
-  }
 ]
 
-export default function DashboardPage() {
-  const [showTutorial, setShowTutorial] = useState(false)
-  const { currentUser, userLoggedIn, loading } = useAuth()
-  const { address, isConnected, balance, balanceSymbol, nftCount, isLoading: walletLoading } = useWalletData()
-  const { connectWallet } = useWeb3()
-  const router = useRouter()
+const purchaseHistory = [
+  {
+    id: "USDT_1710518400000",
+    filmTitle: "The Last Symphony",
+    price: "15 USDT",
+    priceUSDC: 15,
+    date: "2024-03-15",
+    status: "completed",
+    paymentMethod: "usdt",
+    hasNFT: true,
+    accessToken: "ACCESS_1710518400000",
+  },
+  {
+    id: "USDC_1710432000000",
+    filmTitle: "Quantum Horizons",
+    price: "25 USDC",
+    priceUSDC: 25,
+    date: "2024-03-14",
+    status: "completed",
+    paymentMethod: "usdc",
+    hasNFT: false,
+    claimVoucher: "VOUCHER_1710432000000",
+    accessToken: "ACCESS_1710432000000",
+  },
+]
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!loading && !userLoggedIn) {
-      router.push('/')
-    }
-  }, [userLoggedIn, loading, router])
+const claimableOrders = purchaseHistory.filter((order) => !order.hasNFT && order.claimVoucher)
 
-  useEffect(() => {
-    // Check if user just signed up (from sessionStorage)
-    const justSignedUp = sessionStorage.getItem('just-signed-up')
-    const tutorialCompleted = localStorage.getItem('quiflix-tutorial-completed')
-    
-    if (justSignedUp && !tutorialCompleted) {
-      setShowTutorial(true)
-      sessionStorage.removeItem('just-signed-up')
-    }
-  }, [])
+export default function AccountPage() {
+  const [showTokens, setShowTokens] = useState(false)
+  const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [displayCurrency, setDisplayCurrency] = useState<'KES' | 'USDC'>(() => getPreferredCurrency())
 
-  const progressToNextLevel = 0 // Will implement XP system later
+  // Calculate total spent in selected currency
+  const totalSpentUSDC = purchaseHistory.reduce((sum, order) => sum + order.priceUSDC, 0)
+  const totalSpentKES = convertUSDCtoKES(totalSpentUSDC)
 
-  // Show loading while checking authentication
-  if (loading) {
-    return (
-      <PageLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading...</p>
-          </div>
-        </div>
-      </PageLayout>
-    )
+  const handlePlay = (film: any) => {
+    console.log("Playing:", film.title)
   }
 
-  // Don't render if not authenticated (will be redirected)
-  if (!userLoggedIn || !currentUser) {
-    return null
+  const handleClaim = async (walletAddress: string) => {
+    console.log("Claiming NFT to wallet:", walletAddress)
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+  }
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedToken(type)
+    setTimeout(() => setCopiedToken(null), 2000)
+  }
+
+  const downloadReceipt = (orderId: string) => {
+    console.log("Downloading receipt for:", orderId)
+  }
+
+  const toggleDisplayCurrency = () => {
+    const newCurrency = displayCurrency === 'KES' ? 'USDC' : 'KES'
+    setDisplayCurrency(newCurrency)
+    setPreferredCurrency(newCurrency)
   }
 
   return (
-    <>
-      <PageLayout>
-        <div className="space-y-8">
-          {/* Welcome Header */}
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold">
-              Welcome to QuiFlix, {currentUser.displayName || 'Movie Lover'}! 🎬
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Your Web3 entertainment journey starts here. Own your favorite films as NFTs and earn rewards for watching.
-            </p>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Wallet className="h-8 w-8 text-gray-100" />
-                </div>
-                {walletLoading ? (
-                  <div className="text-2xl font-bold">Loading...</div>
-                ) : isConnected ? (
-                  <>
-                    <div className="text-2xl font-bold">{parseFloat(balance).toFixed(4)} {balanceSymbol}</div>
-                    <p className="text-sm text-muted-foreground">Wallet Balance</p>
-                    <p className="text-xs text-muted-foreground mt-1 truncate">{address}</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">Not Connected</div>
-                    <p className="text-sm text-muted-foreground">Connect Wallet</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Film className="h-8 w-8 text-gray-100" />
-                </div>
-                {walletLoading ? (
-                  <div className="text-2xl font-bold">Loading...</div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">{nftCount}</div>
-                    <p className="text-sm text-muted-foreground">NFTs Owned</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Clock className="h-8 w-8 text-gray-100" />
-                </div>
-                <div className="text-2xl font-bold">0h</div>
-                <p className="text-sm text-muted-foreground">Watch Time</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Trophy className="h-8 w-8 text-gray-100" />
-                </div>
-                <div className="text-2xl font-bold">Level 1</div>
-                <p className="text-sm text-muted-foreground">Cinephile Level</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Wallet Connection Prompt */}
-              {!isConnected && (
-                <Card className="border-primary/50 bg-primary/5">
-                  <CardContent className="p-6 text-center">
-                    <Wallet className="h-12 w-12 text-primary mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">Connect Your Web3 Wallet</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Connect your wallet to view your NFT balance and access all Web3 features
-                    </p>
-                    <Button onClick={connectWallet} className="bg-primary hover:bg-primary/90">
-                      <Wallet className="mr-2 h-4 w-4" />
-                      Connect Wallet
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Empty NFT Collection Message */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Film className="h-5 w-5" />
-                    Your NFT Collection
-                  </CardTitle>
-                  <CardDescription>
-                    Films you own as NFTs {isConnected && `(${nftCount} total)`}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {nftCount === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="text-6xl mb-4">🎬</div>
-                      <h3 className="text-xl font-semibold mb-2">
-                        {isConnected ? 'Your collection is empty' : 'Connect wallet to view NFTs'}
-                      </h3>
-                      <p className="text-muted-foreground mb-6">
-                        {isConnected 
-                          ? 'Purchase your first film NFT to start building your digital cinema collection'
-                          : 'Connect your wallet to see your NFT collection'}
-                      </p>
-                      {isConnected ? (
-                        <Link href="/films">
-                          <Button className="bg-primary hover:bg-primary/90">
-                            <ShoppingCart className="mr-2 h-4 w-4" />
-                            Browse Films
-                          </Button>
-                        </Link>
-                      ) : (
-                        <Button onClick={connectWallet} className="bg-primary hover:bg-primary/90">
-                          <Wallet className="mr-2 h-4 w-4" />
-                          Connect Wallet
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {/* NFT cards would go here */}
-                      <div className="text-center py-8 col-span-full">
-                        <p className="text-muted-foreground">You own {nftCount} NFT{nftCount !== 1 ? 's' : ''}</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-
+    <div className="min-h-screen bg-background">
+      <div className="container px-4 py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">My Account</h1>
+              <p className="text-muted-foreground text-lg">Manage your films, NFTs, and purchase history</p>
             </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Quick Actions</CardTitle>
-                  <CardDescription>
-                    Get started with QuiFlix
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {quickActions.map((action, index) => (
-                    <Link key={index} href={action.href}>
-                      <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${action.color} text-white`}>
-                            {action.icon}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium">{action.title}</h4>
-                            <p className="text-sm text-muted-foreground">{action.description}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
-
-              
-              {/* Tutorial Button */}
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <h4 className="font-medium mb-2">Need Help?</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Watch our quick tutorial to learn the basics
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setShowTutorial(true)}
-                    className="w-full"
-                  >
-                    View Tutorial
-                  </Button>
-                </CardContent>
-              </Card>
+            {/* Global Currency Toggle */}
+            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border">
+              <span className="text-sm text-muted-foreground">Display Currency:</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleDisplayCurrency}
+                className="h-8 px-3 gap-1"
+              >
+                <span className="font-semibold">{displayCurrency}</span>
+                <RefreshCw className="h-3 w-3" />
+              </Button>
             </div>
           </div>
         </div>
-      </PageLayout>
 
-      {/* Onboarding Tutorial */}
-      <OnboardingTutorial 
-        open={showTutorial}
-        onOpenChange={setShowTutorial}
-        userEmail={currentUser.email || undefined}
-        walletAddress={currentUser.uid}
-      />
-    </>
+        {/* Account Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-primary">{ownedNFTs.length}</div>
+              <div className="text-sm text-muted-foreground">NFTs Owned</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-primary">{purchaseHistory.length}</div>
+              <div className="text-sm text-muted-foreground">Total Purchases</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="text-2xl font-bold text-primary">{claimableOrders.length}</div>
+              <div className="text-sm text-muted-foreground">Claimable NFTs</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-center">
+              <PriceDisplay 
+                amount={totalSpentUSDC} 
+                currency="USDC" 
+                showToggle={false}
+                size="lg"
+                className="justify-center"
+              />
+              <div className="text-sm text-muted-foreground mt-1">Total Spent</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <Tabs defaultValue="nfts" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="nfts">My NFTs</TabsTrigger>
+            <TabsTrigger value="claim">Claim NFTs</TabsTrigger>
+            <TabsTrigger value="orders">Purchase History</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+
+          {/* My NFTs Tab */}
+          <TabsContent value="nfts" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">My NFT Collection</h2>
+              <Badge variant="outline">
+                {ownedNFTs.length} NFT{ownedNFTs.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+
+            {ownedNFTs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {ownedNFTs.map((nft) => (
+                  <Card key={nft.id} className="overflow-hidden">
+                    <div className="relative aspect-[2/3]">
+                      <img
+                        src={nft.poster || "/placeholder.svg"}
+                        alt={nft.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <Badge className="absolute top-2 right-2 bg-primary">Owned</Badge>
+                    </div>
+                    <CardContent className="p-4 space-y-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">{nft.title}</h3>
+                        <p className="text-muted-foreground text-sm">
+                          {nft.year} • {nft.genre} • ⭐ {nft.rating}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Token ID</span>
+                          <span className="font-mono">#{nft.tokenId}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Purchase Price</span>
+                          <PriceDisplay 
+                            amount={nft.purchasePriceUSDC} 
+                            currency="USDC" 
+                            showToggle={false}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Purchase Date</span>
+                          <span>{nft.purchaseDate}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={() => handlePlay(nft)} className="flex-1 bg-primary hover:bg-primary/90">
+                          <Play className="mr-2 h-4 w-4" />
+                          Watch
+                        </Button>
+                        <Button variant="outline" size="icon">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <div className="text-6xl mb-4">🎬</div>
+                  <h3 className="text-xl font-semibold mb-2">No NFTs Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Purchase films with crypto or claim your existing vouchers to start your collection
+                  </p>
+                  <Button>Browse Films</Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Claim NFTs Tab */}
+          <TabsContent value="claim" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Claim Your NFTs</h2>
+              <Badge variant="outline">{claimableOrders.length} Available</Badge>
+            </div>
+
+            {claimableOrders.length > 0 ? (
+              <div className="space-y-4">
+                {claimableOrders.map((order) => (
+                  <ClaimWidget key={order.id} orderId={order.id} filmTitle={order.filmTitle} onClaim={handleClaim} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <div className="text-6xl mb-4">✅</div>
+                  <h3 className="text-xl font-semibold mb-2">All Caught Up</h3>
+                  <p className="text-muted-foreground">You don't have any NFTs to claim right now</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Purchase History Tab */}
+          <TabsContent value="orders" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Purchase History</h2>
+              <Badge variant="outline">
+                {purchaseHistory.length} Order{purchaseHistory.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+
+            <div className="space-y-4">
+              {purchaseHistory.map((order) => (
+                <Card key={order.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-lg">{order.filmTitle}</h3>
+                          <Badge
+                            variant={order.status === "completed" ? "default" : "secondary"}
+                            className={order.status === "completed" ? "bg-green-100 text-green-800" : ""}
+                          >
+                            {order.status}
+                          </Badge>
+                          {order.hasNFT && <Badge className="bg-purple-100 text-purple-800">NFT Owned</Badge>}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {order.date}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Receipt className="h-4 w-4" />
+                            {order.paymentMethod === "usdt"
+                              ? "USDT"
+                              : order.paymentMethod === "usdc"
+                                ? "USDC"
+                                : order.paymentMethod}
+                          </span>
+                          <PriceDisplay 
+                            amount={order.priceUSDC} 
+                            currency="USDC" 
+                            showToggle={false}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Order ID:</span>
+                          <span className="font-mono text-sm">{order.id}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(order.id, order.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          {copiedToken === order.id && <span className="text-xs text-green-600">Copied!</span>}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button variant="outline" size="sm" onClick={() => downloadReceipt(order.id)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Receipt
+                        </Button>
+                        {order.accessToken && (
+                          <Button size="sm" className="bg-primary hover:bg-primary/90">
+                            <Play className="mr-2 h-4 w-4" />
+                            Watch
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Access Token (for debugging/support) */}
+                    {order.accessToken && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Access Token</span>
+                          <Button variant="ghost" size="sm" onClick={() => setShowTokens(!showTokens)}>
+                            {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        {showTokens && (
+                          <div className="mt-2 p-2 bg-muted rounded text-xs font-mono break-all">
+                            {order.accessToken}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <h2 className="text-2xl font-bold">Account Settings</h2>
+
+            <div className="space-y-6">
+              {/* Currency Preference */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Currency Preferences</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Display Currency</p>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your preferred currency for displaying prices
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={displayCurrency === 'KES' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setDisplayCurrency('KES')
+                          setPreferredCurrency('KES')
+                        }}
+                      >
+                        KES
+                      </Button>
+                      <Button
+                        variant={displayCurrency === 'USDC' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setDisplayCurrency('USDC')
+                          setPreferredCurrency('USDC')
+                        }}
+                      >
+                        USDC
+                      </Button>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="text-sm text-muted-foreground">
+                    Current exchange rate: 1 USDC ≈ KES 129.50
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Profile Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Email Address</label>
+                      <p className="text-muted-foreground">user@example.com</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Wallet Address</label>
+                      <p className="text-muted-foreground font-mono">0x1234...5678</p>
+                    </div>
+                  </div>
+                  <Button variant="outline">Edit Profile</Button>
+                </CardContent>
+              </Card>
+
+              {/* Notification Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notifications</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Email Notifications</p>
+                        <p className="text-sm text-muted-foreground">Receive updates about your purchases</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Configure
+                      </Button>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">NFT Claim Reminders</p>
+                        <p className="text-sm text-muted-foreground">Get reminded to claim your NFTs</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Configure
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Security Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Security</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Two-Factor Authentication</p>
+                        <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Enable
+                      </Button>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Connected Wallets</p>
+                        <p className="text-sm text-muted-foreground">Manage your connected wallets</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Manage
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   )
 }
