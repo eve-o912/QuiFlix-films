@@ -1,30 +1,49 @@
 "use client"
 
-import { useState } from "react"
-import { Wallet, DollarSign } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Wallet, DollarSign, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { CheckoutSuccess } from "@/components/checkout-success"
 import { useCustodialWallet } from "@/hooks/useCustodialWallet"
+import { PriceDisplay } from "@/components/price-display"
+import { getPreferredCurrency, setPreferredCurrency } from "@/lib/currency"
 
 interface CheckoutModalProps {
   isOpen: boolean
   onClose: () => void
   filmTitle: string
   price: string
+  priceUSDC?: number
   filmId: string
   purchaseType?: "nft" | "direct"
 }
 
 type CheckoutStep = "payment-method" | "stablecoin-selection" | "wallet" | "success"
 
-export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purchaseType = "nft" }: CheckoutModalProps) {
+export function CheckoutModal({ 
+  isOpen, 
+  onClose, 
+  filmTitle, 
+  price, 
+  priceUSDC = 25,
+  filmId, 
+  purchaseType = "nft" 
+}: CheckoutModalProps) {
   const { address, formatAddress, sendTransaction } = useCustodialWallet()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>("payment-method")
   const [selectedStablecoin, setSelectedStablecoin] = useState<"usdt" | "usdc" | null>(null)
+  const [displayCurrency, setDisplayCurrency] = useState<'KES' | 'USDC'>('USDC')
   const [orderData, setOrderData] = useState<any>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+
+  // Load preferred currency on mount
+  useEffect(() => {
+    const preferred = getPreferredCurrency()
+    setDisplayCurrency(preferred)
+  }, [])
 
   const handleClose = () => {
     setCurrentStep("payment-method")
@@ -45,6 +64,12 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
     setCurrentStep("wallet")
   }
 
+  const toggleDisplayCurrency = () => {
+    const newCurrency = displayCurrency === 'KES' ? 'USDC' : 'KES'
+    setDisplayCurrency(newCurrency)
+    setPreferredCurrency(newCurrency)
+  }
+
   const handleWalletPayment = async () => {
     console.log("[v0] Processing", selectedStablecoin?.toUpperCase(), "payment for:", filmTitle, "using custodial wallet:", address)
     setIsProcessing(true)
@@ -57,6 +82,8 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
         },
         body: JSON.stringify({
           filmId: filmId,
+          paymentCurrency: selectedStablecoin?.toUpperCase(),
+          displayCurrency: displayCurrency,
         }),
       })
 
@@ -70,6 +97,7 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
         orderId: `NFT_${purchaseData.purchase.tokenId}_${Date.now()}`,
         filmTitle,
         price,
+        priceUSDC,
         email: address,
         paymentMethod: selectedStablecoin,
         purchaseType,
@@ -122,11 +150,34 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Currency Toggle - Show on all steps except success */}
+          {currentStep !== "success" && (
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Display Currency:</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleDisplayCurrency}
+                  className="h-7 px-3 gap-1"
+                >
+                  <span className="font-semibold">{displayCurrency}</span>
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Order Summary - Show on all steps except success */}
           {currentStep !== "success" && (
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
               <span className="font-medium">{filmTitle}</span>
-              <span className="font-bold text-primary">{price}</span>
+              <PriceDisplay 
+                amount={priceUSDC} 
+                currency="USDC" 
+                showToggle={false}
+                size="md"
+              />
             </div>
           )}
 
@@ -212,9 +263,15 @@ export function CheckoutModal({ isOpen, onClose, filmTitle, price, filmId, purch
                   <DollarSign
                     className={`h-4 w-4 ${selectedStablecoin === "usdt" ? "text-green-500" : "text-blue-500"}`}
                   />
-                  <span className="text-sm font-medium">
-                    Paying with {selectedStablecoin.toUpperCase()} • {price}
+                  <span className="text-sm font-medium mr-2">
+                    Paying with {selectedStablecoin.toUpperCase()}:
                   </span>
+                  <PriceDisplay 
+                    amount={priceUSDC} 
+                    currency="USDC" 
+                    showToggle={false}
+                    size="sm"
+                  />
                 </div>
                 <Button
                   onClick={handleWalletPayment}
