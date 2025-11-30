@@ -9,6 +9,30 @@ import { ArrowLeft, CheckCircle, AlertCircle } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
 import Link from "next/link"
 
+// Currency conversion rates
+const EXCHANGE_RATES = {
+  USD_TO_KES: 129.5,
+  USDC_TO_USDT: 1, // 1:1 parity for stablecoins
+}
+
+// Multi-currency price display component
+function PriceDisplay({ usdcAmount }: { usdcAmount: number }) {
+  const usdtAmount = usdcAmount * EXCHANGE_RATES.USDC_TO_USDT
+  const kesAmount = usdcAmount * EXCHANGE_RATES.USD_TO_KES
+
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="font-medium">{usdcAmount.toFixed(2)} USDC</span>
+        <span className="text-muted-foreground">•</span>
+        <span className="font-medium">{usdtAmount.toFixed(2)} USDT</span>
+        <span className="text-muted-foreground">•</span>
+        <span className="font-medium">{kesAmount.toFixed(2)} KES</span>
+      </div>
+    </div>
+  )
+}
+
 export default function ClaimPage({ searchParams }: { searchParams: { voucher?: string } }) {
   const [voucherData, setVoucherData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -21,14 +45,14 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
     // Simulate voucher verification
     setTimeout(() => {
       if (voucher) {
-        // Mock voucher data
+        // Mock voucher data with USDC pricing
         setVoucherData({
           voucherId: voucher,
           filmTitle: "Quantum Horizons",
           filmId: "1",
           poster: "/futuristic-sci-fi-movie-poster.jpg",
           purchaseDate: "2024-03-15",
-          price: "0.05 ETH",
+          priceUSDC: 5.0, // Base price in USDC
           status: "ready_to_claim",
           nftDetails: {
             contract: "0x1234...5678",
@@ -53,7 +77,6 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-     
         <div className="container px-4 py-8 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -67,7 +90,6 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
   if (!voucherData) {
     return (
       <div className="min-h-screen bg-background">
-     
         <div className="container px-4 py-8">
           <div className="max-w-md mx-auto text-center">
             <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -87,7 +109,6 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
   if (claimStatus === "success") {
     return (
       <div className="min-h-screen bg-background">
-    
         <div className="container px-4 py-8">
           <div className="max-w-md mx-auto text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
@@ -113,89 +134,89 @@ export default function ClaimPage({ searchParams }: { searchParams: { voucher?: 
 
   return (
     <PageLayout className="py-8">
-        <div className="flex gap-2 mb-6">
-          <Link href="/account">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Account
-            </Button>
-          </Link>
+      <div className="flex gap-2 mb-6">
+        <Link href="/account">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Account
+          </Button>
+        </Link>
+      </div>
+
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">Claim Your NFT</h1>
+          <p className="text-muted-foreground">Convert your purchase into an NFT ticket that you truly own</p>
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Claim Your NFT</h1>
-            <p className="text-muted-foreground">Convert your purchase into an NFT ticket that you truly own</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Film Info */}
-            <Card>
-              <CardContent className="p-6">
-                <img
-                  src={voucherData.poster || "/placeholder.svg"}
-                  alt={voucherData.filmTitle}
-                  className="w-full rounded-lg mb-4"
-                />
-                <h3 className="font-bold text-lg mb-2">{voucherData.filmTitle}</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Purchase Date</span>
-                    <span>{voucherData.purchaseDate}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Price Paid</span>
-                    <span>{voucherData.price}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status</span>
-                    <Badge className="bg-green-100 text-green-800">Ready to Claim</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Claim Widget */}
-            <div>
-              <ClaimWidget
-                id={voucherData.voucherId}
-                filmTitle={voucherData.filmTitle}
-                onSuccess={handleClaimSuccess}
-                onError={handleClaimError}
-              />
-            </div>
-          </div>
-
-          {/* Benefits */}
-          <Card className="mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Film Info */}
+          <Card>
             <CardContent className="p-6">
-              <h3 className="font-bold mb-4">Why Claim Your NFT?</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-primary font-bold">1</span>
-                  </div>
-                  <h4 className="font-semibold mb-1">True Ownership</h4>
-                  <p className="text-sm text-muted-foreground">Own your ticket forever on the blockchain</p>
+              <img
+                src={voucherData.poster || "/placeholder.svg"}
+                alt={voucherData.filmTitle}
+                className="w-full rounded-lg mb-4"
+              />
+              <h3 className="font-bold text-lg mb-2">{voucherData.filmTitle}</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Purchase Date</span>
+                  <span>{voucherData.purchaseDate}</span>
                 </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-primary font-bold">2</span>
-                  </div>
-                  <h4 className="font-semibold mb-1">Trade & Sell</h4>
-                  <p className="text-sm text-muted-foreground">Transfer or sell your ticket to others</p>
+                <div className="flex flex-col gap-1">
+                  <span className="text-muted-foreground">Price Paid</span>
+                  <PriceDisplay usdcAmount={voucherData.priceUSDC} />
                 </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-primary font-bold">3</span>
-                  </div>
-                  <h4 className="font-semibold mb-1">Exclusive Access</h4>
-                  <p className="text-sm text-muted-foreground">Special perks and future benefits</p>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge className="bg-green-100 text-green-800">Ready to Claim</Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Claim Widget */}
+          <div>
+            <ClaimWidget
+              id={voucherData.voucherId}
+              filmTitle={voucherData.filmTitle}
+              onSuccess={handleClaimSuccess}
+              onError={handleClaimError}
+            />
+          </div>
         </div>
+
+        {/* Benefits */}
+        <Card className="mt-8">
+          <CardContent className="p-6">
+            <h3 className="font-bold mb-4">Why Claim Your NFT?</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-primary font-bold">1</span>
+                </div>
+                <h4 className="font-semibold mb-1">True Ownership</h4>
+                <p className="text-sm text-muted-foreground">Own your ticket forever on the blockchain</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-primary font-bold">2</span>
+                </div>
+                <h4 className="font-semibold mb-1">Trade & Sell</h4>
+                <p className="text-sm text-muted-foreground">Transfer or sell your ticket to others</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-primary font-bold">3</span>
+                </div>
+                <h4 className="font-semibold mb-1">Exclusive Access</h4>
+                <p className="text-sm text-muted-foreground">Special perks and future benefits</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </PageLayout>
   )
 }
