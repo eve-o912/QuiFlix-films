@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Grid, List } from "lucide-react"
+import { PriceDisplay } from "@/components/price-display"
+import { Search, Grid, List, Play, Clock, Star, Users, TrendingUp, Sparkles } from "lucide-react"
 import { db } from "@/firebase/firebase"
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { useAuth } from "@/hooks/useAuth"
@@ -18,19 +19,28 @@ interface Film {
   year?: number
   genre: string
   rating?: number
-  price: string
+  directPurchasePrice: number  // Price in USDC for direct purchase
+  nftPrice: number             // Price in USDC for NFT ticket
   poster: string
   owned: boolean
   description: string
   creatorId?: string
   status?: string
+  duration?: number
+  views?: number
+  owners?: number
+  totalSupply?: number
+  trending?: boolean
+  featured?: boolean
 }
 
 const genres = ["All", "Sci-Fi", "Drama", "Action", "Thriller", "Adventure", "Mystery", "Horror"]
 const sortOptions = [
   { value: "rating", label: "Rating" },
-  { value: "year", label: "Year" },
-  { value: "price", label: "Price" },
+  { value: "trending", label: "Trending" },
+  { value: "newest", label: "Newest" },
+  { value: "price-low", label: "Price: Low to High" },
+  { value: "price-high", label: "Price: High to Low" },
   { value: "title", label: "Title" },
 ]
 
@@ -40,18 +50,18 @@ export default function FilmsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGenre, setSelectedGenre] = useState("All")
-  const [sortBy, setSortBy] = useState("rating")
+  const [sortBy, setSortBy] = useState("trending")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [checkoutModal, setCheckoutModal] = useState<{
     isOpen: boolean
     filmTitle: string
-    price: string
+    price: number
     filmId: string
     purchaseType: "nft" | "direct"
   }>({
     isOpen: false,
     filmTitle: "",
-    price: "",
+    price: 0,
     filmId: "",
     purchaseType: "nft",
   })
@@ -71,18 +81,31 @@ export default function FilmsPage() {
 
         querySnapshot.forEach((doc) => {
           const data = doc.data()
+          
+          // Calculate prices: NFT is 25% cheaper than direct
+          const basePrice = Number.parseFloat(data.price) || 0.008
+          const nftPrice = basePrice
+          const directPrice = basePrice * 1.25
+          
           filmsData.push({
             id: doc.id,
             title: data.title,
             year: data.releaseDate ? new Date(data.releaseDate).getFullYear() : undefined,
             genre: data.genre,
-            rating: 8.5, // Default rating, could be calculated from reviews
-            price: `${data.price} ETH`,
-            poster: data.posterUrl || "/placeholder.svg",
+            rating: data.rating || 4.5, // Default rating
+            directPurchasePrice: directPrice,
+            nftPrice: nftPrice,
+            poster: data.posterUrl || data.thumbnailUrl || "/placeholder.svg",
             owned: false, // TODO: Check if user owns this NFT
             description: data.description,
             creatorId: data.creatorId,
             status: data.status,
+            duration: data.duration,
+            views: Math.floor(Math.random() * 15000) + 1000, // Placeholder
+            owners: Math.floor(Math.random() * 3000) + 100, // Placeholder
+            totalSupply: 5000,
+            trending: Math.random() > 0.5,
+            featured: Math.random() > 0.6,
           })
         })
 
@@ -101,7 +124,8 @@ export default function FilmsPage() {
     .filter((film: Film) => {
       const matchesSearch =
         film.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        film.genre.toLowerCase().includes(searchQuery.toLowerCase())
+        film.genre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        film.description?.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesGenre = selectedGenre === "All" || film.genre === selectedGenre
       return matchesSearch && matchesGenre
     })
@@ -109,10 +133,14 @@ export default function FilmsPage() {
       switch (sortBy) {
         case "rating":
           return (b.rating || 0) - (a.rating || 0)
-        case "year":
+        case "trending":
+          return (b.views || 0) - (a.views || 0)
+        case "newest":
           return (b.year || 0) - (a.year || 0)
-        case "price":
-          return Number.parseFloat(a.price) - Number.parseFloat(b.price)
+        case "price-low":
+          return a.nftPrice - b.nftPrice
+        case "price-high":
+          return b.nftPrice - a.nftPrice
         case "title":
           return a.title.localeCompare(b.title)
         default:
@@ -120,32 +148,40 @@ export default function FilmsPage() {
       }
     })
 
-  const handleBuyNFT = (film: Film) => {
-    console.log("[v0] NFT purchase initiated for:", film.title)
+  const handleBuyNFT = (film: Film, e: React.MouseEvent) => {
+    e.stopPropagation()
+    console.log("[NFT] Purchase initiated for:", film.title)
     setCheckoutModal({
       isOpen: true,
       filmTitle: film.title,
-      price: film.price,
+      price: film.nftPrice,
       filmId: film.id,
       purchaseType: "nft",
     })
   }
 
-  const handleBuyDirect = (film: Film) => {
-    console.log("[v0] Direct purchase initiated for:", film.title)
+  const handleBuyDirect = (film: Film, e: React.MouseEvent) => {
+    e.stopPropagation()
+    console.log("[Direct] Purchase initiated for:", film.title)
     setCheckoutModal({
       isOpen: true,
       filmTitle: film.title,
-      price: film.price,
+      price: film.directPurchasePrice,
       filmId: film.id,
       purchaseType: "direct",
     })
   }
 
   const handlePlay = (film: Film) => {
-    console.log("[v0] Playing film:", film.title)
-    // TODO: Navigate to video player with film ID
+    console.log("[Play] Playing film:", film.title)
     window.location.href = `/watch/${film.id}`
+  }
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "N/A"
+    const hours = Math.floor(seconds / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+    return `${hours}h ${mins}m`
   }
 
   return (
@@ -154,7 +190,9 @@ export default function FilmsPage() {
         {/* Page Header */}
         <div className="mb-6 sm:mb-8 text-center">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Browse Films</h1>
-          <p className="text-muted-foreground text-sm sm:text-base md:text-lg">Discover premium films and own your viewing experience</p>
+          <p className="text-muted-foreground text-sm sm:text-base md:text-lg">
+            Discover premium films - Buy NFT tickets or Direct access
+          </p>
         </div>
 
         {/* Search Bar - Centered */}
@@ -162,7 +200,7 @@ export default function FilmsPage() {
           <div className="relative w-full max-w-2xl px-2 sm:px-0">
             <Search className="absolute left-4 sm:left-6 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
             <Input
-              placeholder="Search films, genres..."
+              placeholder="Search films, genres, descriptions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 sm:pl-12 pr-4 py-2 sm:py-3 rounded-3xl text-center placeholder:text-center border-2 focus:border-primary text-sm sm:text-base"
@@ -193,7 +231,7 @@ export default function FilmsPage() {
 
               {/* Sort */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,68 +295,220 @@ export default function FilmsPage() {
           </div>
         )}
 
-        {/* Films Grid/List */}
+        {/* Films Grid */}
         {!loading && viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredFilms.map((film) => (
               <div 
                 key={film.id} 
-                className="group cursor-pointer bg-card rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
-                onClick={() => film.owned ? handlePlay(film) : handleBuyNFT(film)}
+                className="group bg-card rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
               >
-                <div className="aspect-[3/2] overflow-hidden">
+                {/* Poster */}
+                <div className="relative aspect-[2/3] overflow-hidden">
                   <img
                     src={film.poster || "/placeholder.svg"}
                     alt={film.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                </div>
-                <div className="p-4 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-lg leading-tight truncate flex-1 mr-2">{film.title}</h3>
-                    {film.owned && <Badge className="bg-primary text-xs flex-shrink-0">Owned</Badge>}
+                  
+                  {/* Badges */}
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    {film.featured && (
+                      <Badge className="bg-primary/90 backdrop-blur-sm text-xs">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Featured
+                      </Badge>
+                    )}
+                    {film.trending && (
+                      <Badge className="bg-orange-500/90 backdrop-blur-sm text-xs">
+                        <TrendingUp className="w-3 h-3 mr-1" />
+                        Trending
+                      </Badge>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{film.genre}</span>
-                    <span className="flex items-center gap-1">
-                      ⭐ {film.rating}
-                    </span>
+
+                  {/* Owned Badge */}
+                  {film.owned && (
+                    <Badge className="absolute top-3 right-3 bg-green-500 text-xs">Owned</Badge>
+                  )}
+
+                  {/* Rating */}
+                  <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-white font-semibold text-sm">{film.rating}</span>
                   </div>
-                  {!film.owned && (
-                    <div className="pt-1">
-                      <span className="text-primary font-medium">{film.price}</span>
+
+                  {/* Play Button Overlay */}
+                  {film.owned && (
+                    <div 
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer"
+                      onClick={() => handlePlay(film)}
+                    >
+                      <Button size="lg" className="rounded-full w-16 h-16">
+                        <Play className="w-6 h-6" />
+                      </Button>
                     </div>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h3 className="font-bold text-lg line-clamp-1">{film.title}</h3>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mt-1">
+                      <Badge variant="outline">{film.genre}</Badge>
+                      {film.duration && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDuration(film.duration)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  {!film.owned && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {film.owners?.toLocaleString()}
+                      </span>
+                      <span>{film.views?.toLocaleString()} views</span>
+                    </div>
+                  )}
+
+                  {/* Pricing */}
+                  {!film.owned && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                          <Badge variant="secondary" className="text-xs px-2 py-0">NFT</Badge>
+                          With Resale Rights
+                        </p>
+                        <PriceDisplay usdcPrice={film.nftPrice} size="sm" showToggle />
+                      </div>
+                      <div className="border-t border-dashed pt-2">
+                        <p className="text-xs text-muted-foreground mb-1">Direct Purchase</p>
+                        <PriceDisplay usdcPrice={film.directPurchasePrice} size="sm" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  {!film.owned ? (
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={(e) => handleBuyNFT(film, e)}
+                      >
+                        Buy NFT
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={(e) => handleBuyDirect(film, e)}
+                      >
+                        Direct
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handlePlay(film)}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Watch Now
+                    </Button>
                   )}
                 </div>
               </div>
             ))}
           </div>
         ) : !loading && (
+          // List View
           <div className="space-y-3 sm:space-y-4">
             {filteredFilms.map((film) => (
               <div 
                 key={film.id} 
-                className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-                onClick={() => film.owned ? handlePlay(film) : handleBuyNFT(film)}
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors"
               >
-                <img
-                  src={film.poster || "/placeholder.svg"}
-                  alt={film.title}
-                  className="w-full sm:w-20 md:w-24 h-32 sm:h-24 md:h-28 object-cover rounded mx-auto sm:mx-0"
-                />
-                <div className="flex-1 space-y-2">
+                <div className="relative">
+                  <img
+                    src={film.poster || "/placeholder.svg"}
+                    alt={film.title}
+                    className="w-full sm:w-32 md:w-40 h-48 sm:h-40 object-cover rounded mx-auto sm:mx-0"
+                  />
+                  {film.owned && (
+                    <Badge className="absolute top-2 right-2 bg-green-500 text-xs">Owned</Badge>
+                  )}
+                </div>
+                <div className="flex-1 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div className="text-center sm:text-left">
-                      <h3 className="font-semibold text-base sm:text-lg">{film.title}</h3>
-                      <p className="text-muted-foreground text-sm">
-                        {film.genre} • ⭐ {film.rating}
-                      </p>
-                      {!film.owned && (
-                        <p className="text-primary font-medium text-sm mt-1">{film.price}</p>
-                      )}
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-lg">{film.title}</h3>
+                        {film.featured && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Featured
+                          </Badge>
+                        )}
+                        {film.trending && (
+                          <Badge variant="secondary" className="text-xs bg-orange-500/20">
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                            Trending
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                        <Badge variant="outline">{film.genre}</Badge>
+                        <span className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          {film.rating}
+                        </span>
+                        {film.duration && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatDuration(film.duration)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {film.owned && <Badge className="bg-primary self-center sm:self-start">Owned</Badge>}
                   </div>
+
+                  <p className="text-sm text-muted-foreground line-clamp-2">{film.description}</p>
+
+                  {!film.owned && (
+                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                      <div className="flex gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">NFT Ticket</p>
+                          <PriceDisplay usdcPrice={film.nftPrice} size="sm" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Direct Purchase</p>
+                          <PriceDisplay usdcPrice={film.directPurchasePrice} size="sm" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={(e) => handleBuyNFT(film, e)}>
+                          Buy NFT
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={(e) => handleBuyDirect(film, e)}>
+                          Buy Direct
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {film.owned && (
+                    <Button onClick={() => handlePlay(film)}>
+                      <Play className="w-4 h-4 mr-2" />
+                      Watch Now
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -326,7 +516,7 @@ export default function FilmsPage() {
         )}
 
         {/* No Results */}
-        {filteredFilms.length === 0 && (
+        {!loading && filteredFilms.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🎬</div>
             <h3 className="text-xl font-semibold mb-2">No films found</h3>
@@ -347,7 +537,7 @@ export default function FilmsPage() {
         isOpen={checkoutModal.isOpen}
         onClose={() => setCheckoutModal({ ...checkoutModal, isOpen: false })}
         filmTitle={checkoutModal.filmTitle}
-        price={checkoutModal.price}
+        price={checkoutModal.price.toString()}
         filmId={checkoutModal.filmId}
         purchaseType={checkoutModal.purchaseType}
       />
