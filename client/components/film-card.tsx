@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Play, Star, Wallet } from "lucide-react"
+import { PriceDisplay } from "@/components/price-display"
 
 interface FilmCardProps {
   id: string
@@ -11,7 +12,8 @@ interface FilmCardProps {
   year: number
   genre: string
   rating: number
-  price: string
+  price: string // Keep for backward compatibility
+  priceUSDC?: number // New: USDC amount as number
   poster: string
   owned?: boolean
   onBuyNFT?: () => void
@@ -26,6 +28,7 @@ export function FilmCard({
   genre,
   rating,
   price,
+  priceUSDC = 25, // Default to 25 USDC if not provided
   poster,
   owned = false,
   onBuyNFT,
@@ -41,6 +44,7 @@ export function FilmCard({
           className="object-cover w-full h-full transition-transform group-hover:scale-105"
         />
         {owned && <Badge className="absolute top-2 right-2 bg-primary">Owned</Badge>}
+        
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           {owned ? (
             <Button onClick={onPlay} size="lg" className="bg-primary hover:bg-primary/90">
@@ -48,10 +52,16 @@ export function FilmCard({
               Watch Now
             </Button>
           ) : (
-            <div className="flex flex-col gap-2">
-              <Button onClick={onBuyNFT} size="lg" className="bg-primary hover:bg-primary/90">
+            <div className="flex flex-col gap-2 px-4">
+              <Button onClick={onBuyNFT} size="lg" className="bg-primary hover:bg-primary/90 w-full">
                 <Wallet className="mr-2 h-4 w-4" />
-                Buy NFT - {price}
+                <span className="mr-2">Buy NFT -</span>
+                <PriceDisplay 
+                  amount={priceUSDC} 
+                  currency="USDC" 
+                  showToggle={false}
+                  className="text-white"
+                />
               </Button>
             </div>
           )}
@@ -75,14 +85,21 @@ export function FilmCard({
 
       <CardFooter className="p-4 pt-0">
         {!owned && (
-          <div className="flex gap-2 w-full">
-            <Button onClick={onBuyNFT} className="flex-1 bg-primary hover:bg-primary/90">
-              <Wallet className="mr-2 h-4 w-4" />
-              {price}
-            </Button>
-            <Button onClick={onBuyDirect} variant="outline" className="flex-1 bg-transparent">
-              Buy Direct
-            </Button>
+          <div className="flex flex-col gap-2 w-full">
+            <div className="flex gap-2 w-full">
+              <Button onClick={onBuyNFT} className="flex-1 bg-primary hover:bg-primary/90">
+                <Wallet className="mr-2 h-4 w-4" />
+                <PriceDisplay 
+                  amount={priceUSDC} 
+                  currency="USDC" 
+                  showToggle={true}
+                  className="text-white"
+                />
+              </Button>
+              <Button onClick={onBuyDirect} variant="outline" className="flex-1 bg-transparent">
+                Buy Direct
+              </Button>
+            </div>
           </div>
         )}
         {owned && (
