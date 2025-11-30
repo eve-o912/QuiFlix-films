@@ -88,7 +88,7 @@ export default function BlockchainFilmsPage() {
               </div>
               <h3 className="font-semibold mb-2">Purchase NFT</h3>
               <p className="text-sm text-muted-foreground">
-                Buy films as NFTs using ETH. You'll own the digital rights to stream the content.
+                Buy films as NFTs using USDC,USDT. You'll own the digital rights to stream the content,share and resale.
               </p>
             </div>
             <div className="text-center">
@@ -97,7 +97,7 @@ export default function BlockchainFilmsPage() {
               </div>
               <h3 className="font-semibold mb-2">Stream & Trade</h3>
               <p className="text-sm text-muted-foreground">
-                Stream your owned films anytime, or trade them on the secondary market.
+                Stream your owned films NFT anytime, or trade them on the secondary market.
               </p>
             </div>
           </div>
