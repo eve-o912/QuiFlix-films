@@ -1,98 +1,74 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info, RefreshCw } from "lucide-react"
-import { getPricing, formatPrice, getPreferredCurrency, setPreferredCurrency } from "@/lib/currency"
 
-interface PriceDisplayProps {
-  amount: number
-  currency: 'KES' | 'USDC' | 'USDT'
-  showToggle?: boolean
-  className?: string
-  size?: 'sm' | 'md' | 'lg'
+// Exchange rates
+const EXCHANGE_RATES = {
+  USD_TO_KES: 129.5,
+  USDC_TO_USDT: 1, // 1:1 parity
 }
 
-export function PriceDisplay({ 
-  amount, 
-  currency, 
+interface PriceDisplayProps {
+  amount?: number // Made optional with default
+  usdcPrice?: number // Alternative prop name for backward compatibility
+  currency?: "USDC" | "USDT" | "KES"
+  showToggle?: boolean
+  size?: "sm" | "md" | "lg"
+  className?: string
+}
+
+export function PriceDisplay({
+  amount,
+  usdcPrice, // Alternative prop for backward compatibility
+  currency = "USDC",
   showToggle = false,
+  size = "md",
   className = "",
-  size = 'md'
 }: PriceDisplayProps) {
-  // Use user's preferred currency or default to the passed currency
-  const [displayCurrency, setDisplayCurrency] = useState<'KES' | 'USDC'>(currency as 'KES' | 'USDC')
-  
-  // Load preferred currency on mount (client-side only)
-  useEffect(() => {
-    if (showToggle) {
-      const preferred = getPreferredCurrency()
-      setDisplayCurrency(preferred)
-    }
-  }, [showToggle])
+  // Safely handle undefined amounts - use whichever prop is provided
+  const safeAmount = amount ?? usdcPrice ?? 0
 
-  const pricing = getPricing(amount, currency)
+  // Calculate all three currency values
+  const usdcAmount = safeAmount
+  const usdtAmount = safeAmount * EXCHANGE_RATES.USDC_TO_USDT
+  const kesAmount = safeAmount * EXCHANGE_RATES.USD_TO_KES
 
-  const toggleCurrency = () => {
-    const newCurrency = displayCurrency === 'KES' ? 'USDC' : 'KES'
-    setDisplayCurrency(newCurrency)
-    setPreferredCurrency(newCurrency)
-  }
-
-  const displayAmount = displayCurrency === 'KES' ? pricing.kes : pricing.usdc
-  const alternateAmount = displayCurrency === 'KES' ? pricing.usdc : pricing.kes
-  const alternateCurrency = displayCurrency === 'KES' ? 'USDC' : 'KES'
-
-  // Size variants
+  // Size classes
   const sizeClasses = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg'
+    sm: "text-sm",
+    md: "text-base",
+    lg: "text-xl font-bold",
   }
 
-  const iconSizes = {
-    sm: 'h-3 w-3',
-    md: 'h-3.5 w-3.5',
-    lg: 'h-4 w-4'
+  // Format with safe toFixed
+  const formatAmount = (value: number, decimals: number = 2): string => {
+    if (typeof value !== 'number' || isNaN(value)) {
+      return '0.00'
+    }
+    return value.toFixed(decimals)
   }
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1 cursor-help">
-              <span className={`font-bold ${sizeClasses[size]}`}>
-                {formatPrice(displayAmount, displayCurrency)}
-              </span>
-              <Info className={`${iconSizes[size]} text-muted-foreground opacity-70`} />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="bg-popover text-popover-foreground">
-            <p className="text-xs">
-              ≈ {formatPrice(alternateAmount, alternateCurrency)}
-            </p>
-            {showToggle && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Click <RefreshCw className="h-2.5 w-2.5 inline" /> to toggle
-              </p>
-            )}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {showToggle && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleCurrency}
-          className="h-6 w-6 p-0 hover:bg-accent"
-          title={`Switch to ${alternateCurrency}`}
-        >
-          <RefreshCw className={iconSizes[size]} />
-        </Button>
-      )}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={`inline-flex flex-wrap gap-2 items-center ${sizeClasses[size]} ${className}`}>
+            <span className="font-medium">{formatAmount(usdcAmount)} USDC</span>
+            <span className="text-muted-foreground">•</span>
+            <span className="font-medium">{formatAmount(usdtAmount)} USDT</span>
+            <span className="text-muted-foreground">•</span>
+            <span className="font-medium">{formatAmount(kesAmount, 2)} KES</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="text-xs space-y-1">
+            <div>USDC: {formatAmount(usdcAmount, 4)}</div>
+            <div>USDT: {formatAmount(usdtAmount, 4)}</div>
+            <div>KES: {formatAmount(kesAmount, 2)}</div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
