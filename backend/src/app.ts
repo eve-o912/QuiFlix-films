@@ -27,7 +27,7 @@ app.use(cors({
         'https://qui-flix-films.vercel.app',
         process.env.FRONTEND_URL
       ].filter(Boolean)
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080'],
   credentials: true
 }));
 
