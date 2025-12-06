@@ -149,11 +149,16 @@ export default function UploadFilmPage() {
       // Upload to backend API
       const response = await fetch('/api/films/upload', {
         method: 'POST',
+        headers: {
+          'x-wallet-address': address || currentUser?.uid || 'anonymous',
+        },
         body: formDataToSend,
       })
 
       if (!response.ok) {
-        throw new Error('Upload failed')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Upload failed:', errorData)
+        throw new Error(errorData.error || 'Upload failed')
       }
 
       const result = await response.json()

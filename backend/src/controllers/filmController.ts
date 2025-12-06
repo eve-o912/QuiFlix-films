@@ -77,6 +77,11 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
     console.log('Upload request received');
     console.log('Body:', req.body);
     console.log('Files:', req.files);
+    console.log('Headers:', req.headers);
+
+    // Get wallet address from header
+    const walletAddress = req.headers['x-wallet-address'] as string;
+    console.log('Wallet address:', walletAddress);
 
     const { title, description, genre, duration, releaseDate, price } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -123,7 +128,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       ipfsHash: filmIpfsHash,
       thumbnailIpfsHash,
       uploadedAt: new Date().toISOString(),
-      uploadedBy: req.user?.walletAddress || req.walletAddress
+      uploadedBy: walletAddress
     };
 
     // Upload metadata to IPFS
@@ -139,7 +144,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       genre,
       duration: parseInt(duration),
       releaseDate: new Date(releaseDate).toISOString(),
-      producerId: req.user!.id,
+      producerId: walletAddress || 'anonymous',
       ipfsHash: filmIpfsHash,
       price: price.toString(),
       thumbnailUrl: thumbnailIpfsHash ? ipfsService.getGatewayUrl(thumbnailIpfsHash) : undefined,
