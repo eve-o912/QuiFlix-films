@@ -1,5 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { db, auth } from '@/config/firebase';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  getDoc,
+  orderBy 
+} from 'firebase/firestore';
 
 export interface Film {
   id: string;
@@ -30,14 +39,22 @@ export function useFilms() {
   return useQuery({
     queryKey: ['films'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('films')
-        .select('*')
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as Film[];
+      try {
+        const q = query(
+          collection(db, 'films'),
+          where('status', '==', 'approved'),
+          orderBy('created_at', 'desc')
+        );
+        
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Film[];
+      } catch (error) {
+        console.error('Error fetching films:', error);
+        return [];
+      }
     },
   });
 }
@@ -46,14 +63,21 @@ export function useFilm(id: string) {
   return useQuery({
     queryKey: ['film', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('films')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data as Film;
+      try {
+        const docRef = doc(db, 'films', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          return {
+            id: docSnap.id,
+            ...docSnap.data()
+          } as Film;
+        }
+        throw new Error('Film not found');
+      } catch (error) {
+        console.error('Error fetching film:', error);
+        throw error;
+      }
     },
     enabled: !!id,
   });
@@ -63,17 +87,25 @@ export function useMyFilms() {
   return useQuery({
     queryKey: ['my-films'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      try {
+        const user = auth.currentUser;
+        if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('films')
-        .select('*')
-        .eq('creator_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as Film[];
+        const q = query(
+          collection(db, 'films'),
+          where('creator_id', '==', user.uid),
+          orderBy('created_at', 'desc')
+        );
+        
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Film[];
+      } catch (error) {
+        console.error('Error fetching my films:', error);
+        return [];
+      }
     },
   });
 }
@@ -82,19 +114,36 @@ export function useMyInvestments() {
   return useQuery({
     queryKey: ['my-investments'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      try {
+        const user = auth.currentUser;
+        if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('investments')
-        .select(`
-          *,
-          film:films(*)
-        `)
-        .eq('investor_id', user.id);
-
-      if (error) throw error;
-      return data;
+        const q = query(
+          collection(db, 'investments'),
+          where('investor_id', '==', user.uid)
+        );
+        
+        const snapshot = await getDocs(q);
+        const investments = await Promise.all(
+          snapshot.docs.map(async (investmentDoc) => {
+            const investmentData = investmentDoc.data();
+            
+            const filmRef = doc(db, 'films', investmentData.film_id);
+            const filmSnap = await getDoc(filmRef);
+            
+            return {
+              id: investmentDoc.id,
+              ...investmentData,
+              film: filmSnap.exists() ? { id: filmSnap.id, ...filmSnap.data() } : null
+            };
+          })
+        );
+        
+        return investments;
+      } catch (error) {
+        console.error('Error fetching investments:', error);
+        return [];
+      }
     },
   });
 }
@@ -103,19 +152,36 @@ export function useMyPurchases() {
   return useQuery({
     queryKey: ['my-purchases'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      try {
+        const user = auth.currentUser;
+        if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('purchases')
-        .select(`
-          *,
-          film:films(*)
-        `)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      return data;
+        const q = query(
+          collection(db, 'purchases'),
+          where('user_id', '==', user.uid)
+        );
+        
+        const snapshot = await getDocs(q);
+        const purchases = await Promise.all(
+          snapshot.docs.map(async (purchaseDoc) => {
+            const purchaseData = purchaseDoc.data();
+            
+            const filmRef = doc(db, 'films', purchaseData.film_id);
+            const filmSnap = await getDoc(filmRef);
+            
+            return {
+              id: purchaseDoc.id,
+              ...purchaseData,
+              film: filmSnap.exists() ? { id: filmSnap.id, ...filmSnap.data() } : null
+            };
+          })
+        );
+        
+        return purchases;
+      } catch (error) {
+        console.error('Error fetching purchases:', error);
+        return [];
+      }
     },
   });
 }
@@ -124,19 +190,36 @@ export function useMyEarnings() {
   return useQuery({
     queryKey: ['my-earnings'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      try {
+        const user = auth.currentUser;
+        if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('earnings')
-        .select(`
-          *,
-          film:films(title)
-        `)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      return data;
+        const q = query(
+          collection(db, 'earnings'),
+          where('user_id', '==', user.uid)
+        );
+        
+        const snapshot = await getDocs(q);
+        const earnings = await Promise.all(
+          snapshot.docs.map(async (earningDoc) => {
+            const earningData = earningDoc.data();
+            
+            const filmRef = doc(db, 'films', earningData.film_id);
+            const filmSnap = await getDoc(filmRef);
+            
+            return {
+              id: earningDoc.id,
+              ...earningData,
+              film: filmSnap.exists() ? { title: filmSnap.data().title } : { title: 'Unknown' }
+            };
+          })
+        );
+        
+        return earnings;
+      } catch (error) {
+        console.error('Error fetching earnings:', error);
+        return [];
+      }
     },
   });
 }
