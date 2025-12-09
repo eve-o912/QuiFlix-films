@@ -1,51 +1,62 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { Wallet } from "https://esm.sh/ethers@6.11.1";
+import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
+import { Wallet } from 'ethers';
+
+// Initialize Firebase Admin
+admin.initializeApp();
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-serve(async (req) => {
+export const generateWallet = functions.https.onRequest(async (req, res) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    res.set(corsHeaders);
+    res.status(204).send('');
+    return;
   }
 
+  // Set CORS headers for main request
+  res.set(corsHeaders);
+
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Get user from auth header
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError || !user) {
-      throw new Error('Unauthorized');
+    // Verify Firebase Auth token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Unauthorized: No token provided' });
+      return;
     }
 
-    const { network = 'base' } = await req.json();
+    const token = authHeader.replace('Bearer ', '');
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const userId = decodedToken.uid;
+
+    // Get network from request body
+    const { network = 'base' } = req.body;
+
+    // Reference to Firestore
+    const db = admin.firestore();
+    const walletsRef = db.collection('custodial_wallets');
 
     // Check if wallet already exists for this user and network
-    const { data: existingWallet } = await supabaseClient
-      .from('custodial_wallets')
-      .select('wallet_address')
-      .eq('user_id', user.id)
-      .eq('network', network)
-      .single();
+    const existingWalletQuery = await walletsRef
+      .where('user_id', '==', userId)
+      .where('network', '==', network)
+      .limit(1)
+      .get();
 
-    if (existingWallet) {
-      console.log(`Wallet already exists for user ${user.id} on ${network}`);
-      return new Response(
-        JSON.stringify({ 
-          wallet_address: existingWallet.wallet_address,
-          message: 'Wallet already exists' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!existingWalletQuery.empty) {
+      const existingWallet = existingWalletQuery.docs[0].data();
+      console.log(`Wallet already exists for user ${userId} on ${network}`);
+      
+      res.status(200).json({
+        wallet_address: existingWallet.wallet_address,
+        message: 'Wallet already exists'
+      });
+      return;
     }
 
     // Generate new wallet
@@ -53,39 +64,30 @@ serve(async (req) => {
     const walletAddress = wallet.address;
     const privateKey = wallet.privateKey;
 
-    // Simple encryption (in production, use proper encryption like AES-256)
-    const encryptedPrivateKey = btoa(privateKey); // Base64 encoding for demo
+    // Simple encryption (in production, use proper encryption like AES-256-GCM)
+    // Consider using Google Cloud KMS for production
+    const encryptedPrivateKey = Buffer.from(privateKey).toString('base64');
 
-    // Store wallet in database
-    const { error: insertError } = await supabaseClient
-      .from('custodial_wallets')
-      .insert({
-        user_id: user.id,
-        wallet_address: walletAddress,
-        encrypted_private_key: encryptedPrivateKey,
-        network: network,
-      });
+    // Store wallet in Firestore
+    await walletsRef.add({
+      user_id: userId,
+      wallet_address: walletAddress,
+      encrypted_private_key: encryptedPrivateKey,
+      network: network,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
-    if (insertError) {
-      console.error('Error storing wallet:', insertError);
-      throw insertError;
-    }
+    console.log(`Generated wallet ${walletAddress} for user ${userId} on ${network}`);
 
-    console.log(`Generated wallet ${walletAddress} for user ${user.id} on ${network}`);
+    res.status(200).json({
+      wallet_address: walletAddress,
+      message: 'Wallet created successfully'
+    });
 
-    return new Response(
-      JSON.stringify({ 
-        wallet_address: walletAddress,
-        message: 'Wallet created successfully' 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   } catch (error) {
     console.error('Error in generate-wallet function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    
+    res.status(400).json({ error: errorMessage });
   }
 });
