@@ -10,7 +10,8 @@ import { Wallet, Loader2, TrendingUp, Sparkles, Play } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { USDC_ABI, CONTRACT_ADDRESSES } from '@/config/contracts';
 import { USDC_ADDRESSES } from '@/config/web3';
-import { supabase } from '@/integrations/supabase/client';
+import { db, auth } from '@/config/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { WalletSelection } from './WalletSelection';
 
 interface PurchaseDialogProps {
@@ -88,29 +89,33 @@ export function PurchaseDialog({
 
   const recordPurchase = async (txHash: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) return;
 
       const price = parseFloat(getPrice());
 
       if (purchaseType === 'investment') {
-        // Record investment
-        await supabase.from('investments').insert({
-          investor_id: user.id,
+        // Record investment in Firebase
+        await addDoc(collection(db, 'investments'), {
+          investor_id: user.uid,
           film_id: filmId,
           shares_owned: shares,
           amount_invested: price,
           tx_hash: txHash,
+          created_at: serverTimestamp(),
+          earnings_claimed: 0,
         });
       } else {
-        // Record purchase
-        await supabase.from('purchases').insert({
-          user_id: user.id,
+        // Record purchase in Firebase
+        await addDoc(collection(db, 'purchases'), {
+          user_id: user.uid,
           film_id: filmId,
           purchase_type: purchaseType,
           amount: price,
           network: network,
           tx_hash: txHash,
+          currency: 'USDC',
+          created_at: serverTimestamp(),
         });
       }
     } catch (error) {
