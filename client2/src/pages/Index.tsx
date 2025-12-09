@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Film, Play, Sparkles, TrendingUp, Users, DollarSign, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink } from "@/components/NavLink";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/config/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { HeroCarousel } from "@/components/HeroCarousel";
 import logo from "@/assets/quiflix-logo.png";
 
@@ -11,11 +12,15 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    // Listen to Firebase auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
         navigate('/home');
       }
     });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, [navigate]);
 
   return (
@@ -252,7 +257,7 @@ const Index = () => {
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-            <p>© 2024 QuiFlix. Powered by Base, Lisk, Scroll & Celo networks.</p>
+            <p>© 2025 QuiFlix. Powered by Base, Lisk, Scroll & Celo networks.</p>
           </div>
         </div>
       </footer>
