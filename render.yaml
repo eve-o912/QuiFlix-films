@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: quiflix-backend
+    env: node
+    buildCommand: cd backend && pnpm install --no-frozen-lockfile && pnpm build
+    startCommand: cd backend && pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+```
+
+## Quick Fix: Update Render Settings
+
+1. Go to your Render dashboard
+2. Select your service
+3. Go to **Settings** → **Build & Deploy**
+4. Update **Build Command** from:
+```
+   pnpm install; pnpm build
+```
+   
+   To:
+```
+   pnpm install --no-frozen-lockfile && pnpm build

@@ -1,0 +1,6 @@
+backend/node_modules/
+backend/.env
+contracts/.env
+contracts/node_modules/
+client2/node_modules/
+client2/.env
