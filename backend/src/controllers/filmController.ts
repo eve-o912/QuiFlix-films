@@ -1,4 +1,4 @@
-import { Request, Response, RequestHandler } from 'express';
+import { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -6,6 +6,7 @@ import ipfsService from '../services/ipfsService';
 import { addFilmMetadata } from '../services/firestoreService';
 import blockchainService from '../services/blockchainService';
 import { 
+ 
   User,
   Film,
   Purchase,
@@ -16,7 +17,6 @@ interface AuthenticatedRequest extends Request {
   user?: User;
   walletAddress?: string;
 }
-
 // Simple in-memory storage (replace with Firebase later)
 const films: Map<string, Film> = new Map();
 const purchases: Map<string, Purchase> = new Map();
@@ -40,21 +40,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '524288000') // 500MB default (524288000 bytes)
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || '104857600') // 100MB default
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = [
-      'video/mp4', 
-      'video/avi', 
-      'video/mov', 
-      'video/mkv',
-      'video/webm',
-      'video/quicktime',
-      'image/jpeg', 
-      'image/png', 
-      'image/gif',
-      'image/webp'
-    ];
+    const allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'image/jpeg', 'image/png', 'image/gif'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -63,58 +52,39 @@ const upload = multer({
   }
 });
 
-// Fix: Add explicit type annotation
-export const uploadMiddleware: RequestHandler = upload.fields([
+export const uploadMiddleware = upload.fields([
   { name: 'filmFile', maxCount: 1 },
   { name: 'thumbnailFile', maxCount: 1 }
-]) as RequestHandler;
+]);
 
 /**
  * Upload film with metadata and IPFS hash
  */
 export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    console.log('Upload request received');
-    console.log('Body:', req.body);
-    console.log('Files:', req.files);
-    console.log('Headers:', req.headers);
-
-    // Get wallet address from header
-    const walletAddress = req.headers['x-wallet-address'] as string;
-    console.log('Wallet address:', walletAddress);
-
     const { title, description, genre, duration, releaseDate, price } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     // Validate required fields
     if (!title || !description || !genre || !duration || !releaseDate || !price) {
-      console.error('Missing required fields');
-      return res.status(400).json({ 
-        error: 'Missing required fields',
-        received: { title, description, genre, duration, releaseDate, price }
-      });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Validate files
     if (!files.filmFile || files.filmFile.length === 0) {
-      console.error('Film file is missing');
       return res.status(400).json({ error: 'Film file is required' });
     }
 
     const filmFile = files.filmFile[0];
     const thumbnailFile = files.thumbnailFile?.[0];
 
-    console.log(`Uploading film: ${filmFile.originalname} (${filmFile.size} bytes)`);
-
     // Upload film to IPFS
     const filmIpfsHash = await ipfsService.uploadFile(filmFile.path, filmFile.originalname);
-    console.log(`Film uploaded to IPFS: ${filmIpfsHash}`);
     
     // Upload thumbnail to IPFS if provided
     let thumbnailIpfsHash = null;
     if (thumbnailFile) {
       thumbnailIpfsHash = await ipfsService.uploadFile(thumbnailFile.path, thumbnailFile.originalname);
-      console.log(`Thumbnail uploaded to IPFS: ${thumbnailIpfsHash}`);
     }
 
     // Create metadata object
@@ -128,12 +98,11 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       ipfsHash: filmIpfsHash,
       thumbnailIpfsHash,
       uploadedAt: new Date().toISOString(),
-      uploadedBy: walletAddress
+      uploadedBy: req.user?.walletAddress || req.walletAddress
     };
 
     // Upload metadata to IPFS
     const metadataIpfsHash = await ipfsService.uploadMetadata(metadata, `${title.replace(/\s+/g, '_')}_metadata.json`);
-    console.log(`Metadata uploaded to IPFS: ${metadataIpfsHash}`);
 
     // Create film in memory storage (initially inactive)
     const filmId = Date.now().toString();
@@ -144,7 +113,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
       genre,
       duration: parseInt(duration),
       releaseDate: new Date(releaseDate).toISOString(),
-      producerId: walletAddress || 'anonymous',
+      producerId: req.user!.id,
       ipfsHash: filmIpfsHash,
       price: price.toString(),
       thumbnailUrl: thumbnailIpfsHash ? ipfsService.getGatewayUrl(thumbnailIpfsHash) : undefined,
@@ -155,17 +124,13 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
     };
     films.set(filmId, film);
 
-    console.log(`Film created with ID: ${filmId}`);
+    // Note: Blockchain transaction will be done on frontend using custodial wallet
+    // For now, store the metadata IPFS hash
 
     // Clean up uploaded files
-    try {
-      fs.unlinkSync(filmFile.path);
-      if (thumbnailFile) {
-        fs.unlinkSync(thumbnailFile.path);
-      }
-      console.log('Temporary files cleaned up');
-    } catch (cleanupError) {
-      console.warn('Error cleaning up temporary files:', cleanupError);
+    fs.unlinkSync(filmFile.path);
+    if (thumbnailFile) {
+      fs.unlinkSync(thumbnailFile.path);
     }
 
     res.status(201).json({
@@ -182,10 +147,7 @@ export const uploadFilm = async (req: AuthenticatedRequest, res: Response) => {
 
   } catch (error) {
     console.error('Error uploading film:', error);
-    res.status(500).json({ 
-      error: 'Failed to upload film',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    res.status(500).json({ error: 'Failed to upload film' });
     return;
   }
 };
@@ -309,7 +271,7 @@ export const streamFilm = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to stream film' });
     return;
   }
-};
+ };
 
 /**
  * Resell NFT (secondary market logic)
