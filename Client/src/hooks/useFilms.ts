@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { auth, db } from '@/lib/firebase';
-import { 
+import { auth, db } from '@/firebase.config';import { 
   collection, 
   query, 
   where, 
