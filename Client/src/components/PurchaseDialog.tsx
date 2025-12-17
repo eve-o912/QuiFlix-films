@@ -10,7 +10,8 @@ import { Wallet, Loader2, TrendingUp, Sparkles, Play } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { USDC_ABI, CONTRACT_ADDRESSES } from '@/config/contracts';
 import { USDC_ADDRESSES } from '@/config/web3';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
+import { FIREBASE_FUNCTIONS } from '@/lib/firebase-functions';
 import { WalletSelection } from './WalletSelection';
 
 interface PurchaseDialogProps {
@@ -62,12 +63,20 @@ export function PurchaseDialog({
 
       setLoadingBalance(true);
       try {
-        const response = await supabase.functions.invoke('get-wallet-balance', {
-          body: { walletAddress: address, network }
+        const response = await fetch(FIREBASE_FUNCTIONS.getWalletBalance, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            walletAddress: address, 
+            network 
+          }),
         });
 
-        if (response.data) {
-          setBalance(response.data);
+        const data = await response.json();
+        if (data) {
+          setBalance(data);
         }
       } catch (error) {
         console.error('Failed to fetch balance:', error);
@@ -124,29 +133,39 @@ export function PurchaseDialog({
 
   const recordPurchase = async (txHash: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) return;
 
+      // Get Firebase ID token for authentication
+      const idToken = await user.getIdToken();
       const price = parseFloat(getPrice());
 
       if (purchaseType === 'investment') {
-        // Record investment
-        await supabase.from('investments').insert({
-          investor_id: user.id,
+        // Record investment using Cloud Function or Firestore
+        const { db } = await import('@/lib/firebase');
+        const { collection, addDoc } = await import('firebase/firestore');
+        
+        await addDoc(collection(db, 'investments'), {
+          investor_id: user.uid,
           film_id: filmId,
           shares_owned: shares,
           amount_invested: price,
           tx_hash: txHash,
+          created_at: new Date().toISOString(),
         });
       } else {
         // Record purchase
-        await supabase.from('purchases').insert({
-          user_id: user.id,
+        const { db } = await import('@/lib/firebase');
+        const { collection, addDoc } = await import('firebase/firestore');
+        
+        await addDoc(collection(db, 'purchases'), {
+          user_id: user.uid,
           film_id: filmId,
           purchase_type: purchaseType,
           amount: price,
           network: network,
           tx_hash: txHash,
+          created_at: new Date().toISOString(),
         });
       }
     } catch (error) {
