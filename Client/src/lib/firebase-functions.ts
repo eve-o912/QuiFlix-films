@@ -87,3 +87,12 @@ export const getFilmById = async (filmId: string) => {
     return null;
   }
 };
+
+// Export all functions as a single object for easier importing
+export const FIREBASE_FUNCTIONS = {
+  recordPurchase,
+  getUserPurchases,
+  checkFilmOwnership,
+  getFilms,
+  getFilmById
+};
