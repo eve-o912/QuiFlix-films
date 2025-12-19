@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/firebase.config';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  updateProfile
+} from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,21 +24,14 @@ export default function Auth() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    // Check if user is already logged in and redirect
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
         navigate('/');
       }
     });
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/');
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -40,27 +39,38 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-
-      if (error) throw error;
+      // Create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update user profile with full name
+      if (userCredential.user && fullName) {
+        await updateProfile(userCredential.user, {
+          displayName: fullName,
+        });
+      }
 
       toast({
         title: 'Account created!',
         description: 'Welcome to QuiFlix. You can now start browsing films.',
       });
+
+      // Navigate to home after successful signup
+      navigate('/');
     } catch (error: any) {
+      let errorMessage = 'An error occurred during sign up.';
+      
+      // Handle Firebase error codes
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password should be at least 6 characters.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      }
+
       toast({
         title: 'Sign up failed',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -73,21 +83,32 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
+      await signInWithEmailAndPassword(auth, email, password);
 
       toast({
         title: 'Welcome back!',
         description: 'Successfully signed in.',
       });
+
+      // Navigate to home after successful signin
+      navigate('/');
     } catch (error: any) {
+      let errorMessage = 'Invalid email or password.';
+      
+      // Handle Firebase error codes
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
+
       toast({
         title: 'Sign in failed',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
