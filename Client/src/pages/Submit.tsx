@@ -9,12 +9,9 @@ import { Film, DollarSign, Upload, Image, Video, FileText, TrendingUp, Loader2 }
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
-import { app } from "@/firebase.config"; // Import your Firebase config
-
-const auth = getAuth(app);
-const db = getFirestore(app);
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/firebase.config"; // Fixed import
 
 const Submit = () => {
   const navigate = useNavigate();
