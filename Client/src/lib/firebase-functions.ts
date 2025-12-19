@@ -1,6 +1,6 @@
 // src/lib/firebase-functions.ts
 
-import { db } from '@/firebase';
+import { db } from '@/firebase.config';
 import { 
   collection, 
   addDoc, 
