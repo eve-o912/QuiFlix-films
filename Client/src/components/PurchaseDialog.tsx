@@ -10,8 +10,8 @@ import { Wallet, Loader2, TrendingUp, Sparkles, Play } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { USDC_ABI, CONTRACT_ADDRESSES } from '@/config/contracts';
 import { USDC_ADDRESSES } from '@/config/web3';
-import { auth } from '@/lib/firebase';
-import { auth } from '@/firebase.config';
+import { auth, db } from '@/firebase.config';
+import { collection, addDoc } from 'firebase/firestore';
 import { WalletSelection } from './WalletSelection';
 
 interface PurchaseDialogProps {
@@ -63,21 +63,14 @@ export function PurchaseDialog({
 
       setLoadingBalance(true);
       try {
-        const response = await fetch(FIREBASE_FUNCTIONS.getWalletBalance, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            walletAddress: address, 
-            network 
-          }),
+        // TODO: Implement actual balance fetching
+        // For now, return mock data
+        setBalance({
+          usdc: '100.00',
+          usdt: '0.00',
+          native: '0.05',
+          kes: '0.00'
         });
-
-        const data = await response.json();
-        if (data) {
-          setBalance(data);
-        }
       } catch (error) {
         console.error('Failed to fetch balance:', error);
       } finally {
@@ -136,15 +129,10 @@ export function PurchaseDialog({
       const user = auth.currentUser;
       if (!user) return;
 
-      // Get Firebase ID token for authentication
-      const idToken = await user.getIdToken();
       const price = parseFloat(getPrice());
 
       if (purchaseType === 'investment') {
-        // Record investment using Cloud Function or Firestore
-        const { db } = await import('@/lib/firebase');
-        const { collection, addDoc } = await import('firebase/firestore');
-        
+        // Record investment
         await addDoc(collection(db, 'investments'), {
           investor_id: user.uid,
           film_id: filmId,
@@ -155,9 +143,6 @@ export function PurchaseDialog({
         });
       } else {
         // Record purchase
-        const { db } = await import('@/lib/firebase');
-        const { collection, addDoc } = await import('firebase/firestore');
-        
         await addDoc(collection(db, 'purchases'), {
           user_id: user.uid,
           film_id: filmId,
