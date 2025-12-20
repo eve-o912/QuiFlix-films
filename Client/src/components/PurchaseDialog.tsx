@@ -11,7 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { USDC_ABI, CONTRACT_ADDRESSES } from '@/config/contracts';
 import { USDC_ADDRESSES } from '@/config/web3';
 import { auth } from '@/lib/firebase';
-import { FIREBASE_FUNCTIONS } from '@/lib/firebase-functions';
+import { auth } from '@/firebase.config';
 import { WalletSelection } from './WalletSelection';
 
 interface PurchaseDialogProps {
