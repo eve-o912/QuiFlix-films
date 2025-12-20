@@ -5,16 +5,14 @@ import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Firebase configuration object
+// Firebase configuration object - using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyBh0uaHuOShcdIuEIScVs96Xicq6pPiwnk",
-  authDomain: "quiflix-web3boxoffice.firebaseapp.com",
-  databaseURL: "https://quiflix-web3boxoffice-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "quiflix-web3boxoffice",
-  storageBucket: "quiflix-web3boxoffice.firebasestorage.app",
-  messagingSenderId: "722887250041",
-  appId: "1:722887250041:web:9419d3e0fd7c7ebcb004a8",
-  measurementId: "G-RFWHYYDCY0"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase only if it hasn't been initialized yet
