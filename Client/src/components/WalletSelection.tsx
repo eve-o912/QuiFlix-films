@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useConnect } from 'wagmi';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/firebase.config';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Wallet, Shield, Loader2, CreditCard, ExternalLink } from 'lucide-react';
