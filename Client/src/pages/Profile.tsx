@@ -7,24 +7,9 @@ import { ArrowLeft, Copy, Film, Trophy, Download, User, ChevronRight } from "luc
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
-
-// Firebase configuration - Replace with your actual config
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
-// Initialize Firebase (do this once in your app, preferably in a separate config file)
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/firebase.config";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -41,7 +26,7 @@ const Profile = () => {
         navigate('/auth');
         return;
       }
-      
+
       setUserId(user.uid);
       await fetchUserData(user.uid);
     });
@@ -71,7 +56,7 @@ const Profile = () => {
           ...walletDoc.data()
         };
         setWallet(walletData);
-        
+
         // Fetch balance if wallet exists
         if (walletData.wallet_address) {
           await fetchBalance(walletData.wallet_address);
@@ -88,15 +73,17 @@ const Profile = () => {
   // Fetch wallet balance from Firebase Function or API
   const fetchBalance = async (walletAddress) => {
     try {
-      // Option 1: Using Firebase Cloud Functions
-      // const getFunctions = (await import('firebase/functions')).getFunctions;
-      // const httpsCallable = (await import('firebase/functions')).httpsCallable;
-      // const functions = getFunctions(app);
-      // const getWalletBalance = httpsCallable(functions, 'getWalletBalance');
-      // const result = await getWalletBalance({ walletAddress });
-      // setBalance(result.data);
+      // TODO: Replace with your actual API endpoint
+      // For now, using mock data
+      setBalance({
+        usdc: '100.00',
+        usdt: '50.00',
+        kes: '15000.00',
+        exchangeRate: '150'
+      });
 
-      // Option 2: Using a REST API endpoint
+      // Uncomment when you have the API ready:
+      /*
       const response = await fetch('YOUR_API_ENDPOINT/get-wallet-balance', {
         method: 'POST',
         headers: {
@@ -109,6 +96,7 @@ const Profile = () => {
         const data = await response.json();
         setBalance(data);
       }
+      */
     } catch (error) {
       console.error('Error fetching balance:', error);
       // Set default values on error
@@ -176,7 +164,7 @@ const Profile = () => {
 
             {/* Profile Header */}
             <div className="flex items-start gap-6">
-              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">     
                 <User className="h-12 w-12 text-primary" />
               </div>
               <div className="flex-1">
@@ -239,7 +227,7 @@ const Profile = () => {
                         </p>
                       </div>
 
-                      <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg">
+                      <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg">     
                         <span className="text-sm text-muted-foreground">Balance</span>
                         <p className="text-2xl font-bold mt-1">
                           {balance ? `KES ${balance.kes}` : 'Loading...'}
