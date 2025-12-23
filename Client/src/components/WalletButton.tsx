@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
-import { auth } from '@/firebase.config';
+import { auth, db } from '@/firebase.config';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './ui/button';
