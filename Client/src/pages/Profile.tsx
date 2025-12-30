@@ -10,6 +10,9 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase.config";
+import { useWalletInfo } from "@/hooks/useWalletInfo";
+import { useNFTBalance } from "@/hooks/useNFTBalance";
+import { WalletStatus } from "@/components/WalletStatus";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -18,6 +21,10 @@ const Profile = () => {
   const [wallet, setWallet] = useState(null);
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Use custom hooks for wallet info and NFT balance
+  const walletInfo = useWalletInfo();
+  const { balance: nftBalance, isLoading: nftLoading, refetch: refetchNFTs } = useNFTBalance();
 
   // Authentication listener
   useEffect(() => {
@@ -51,7 +58,7 @@ const Profile = () => {
       // Fetch wallet data from 'wallets' collection
       const walletDoc = await getDoc(doc(db, 'wallets', uid));
       if (walletDoc.exists()) {
-        const walletData = {
+        const walletData: any = {
           id: walletDoc.id,
           ...walletDoc.data()
         };
@@ -177,16 +184,7 @@ const Profile = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {wallet ? (
-                  <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-sm flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    Wallet Connected
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 bg-gray-500/10 text-gray-500 rounded-full text-sm">
-                    No Wallet
-                  </span>
-                )}
+                <WalletStatus variant="default" showCopyButton={false} showChainInfo={false} />
               </div>
             </div>
 
@@ -197,42 +195,19 @@ const Profile = () => {
                   <Trophy className="h-5 w-5 text-primary" />
                   Wallet Details
                 </h2>
-                {wallet ? (
+                {walletInfo.isConnected ? (
                   <div className="space-y-4">
-                    <div className="p-4 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Address</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={copyAddress}
-                          className="h-8"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <code className="text-sm bg-background px-3 py-2 rounded block">
-                        {formatAddress(wallet.wallet_address)}
-                      </code>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Click to copy full address
+                    <WalletStatus 
+                      variant="detailed" 
+                      showCopyButton={true} 
+                      showChainInfo={true} 
+                    />
+
+                    <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg">     
+                      <span className="text-sm text-muted-foreground">Token Balance</span>
+                      <p className="text-2xl font-bold mt-1">
+                        {balance ? `KES ${balance.kes}` : 'Loading...'}
                       </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 bg-muted rounded-lg">
-                        <span className="text-sm text-muted-foreground">Network</span>
-                        <p className="text-lg font-semibold mt-1">
-                          {wallet.network} Network
-                        </p>
-                      </div>
-
-                      <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg">     
-                        <span className="text-sm text-muted-foreground">Balance</span>
-                        <p className="text-2xl font-bold mt-1">
-                          {balance ? `KES ${balance.kes}` : 'Loading...'}
-                        </p>
-                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -251,7 +226,7 @@ const Profile = () => {
                     </div>
 
                     <p className="text-xs text-muted-foreground text-center">
-                      Updates every 30 seconds
+                      Balance updates automatically
                     </p>
                   </div>
                 ) : (
@@ -273,14 +248,18 @@ const Profile = () => {
               <Card>
                 <CardContent className="p-6 text-center">
                   <Film className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <p className="text-3xl font-bold mb-1">0</p>
+                  <p className="text-3xl font-bold mb-1">
+                    {nftLoading ? '...' : nftBalance}
+                  </p>
                   <p className="text-sm text-muted-foreground">Films Owned</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6 text-center">
                   <Trophy className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <p className="text-3xl font-bold mb-1">0</p>
+                  <p className="text-3xl font-bold mb-1">
+                    {nftLoading ? '...' : nftBalance}
+                  </p>
                   <p className="text-sm text-muted-foreground">NFTs Collected</p>
                 </CardContent>
               </Card>
@@ -305,16 +284,29 @@ const Profile = () => {
                 <p className="text-sm text-muted-foreground mb-6">
                   Films you own and can watch anytime
                 </p>
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <Film className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">No films yet</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Start building your collection by purchasing films
-                  </p>
-                  <Button onClick={() => navigate('/browse')}>
-                    Browse Films
-                  </Button>
-                </div>
+                {nftBalance === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                    <Film className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No films yet</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Start building your collection by purchasing films
+                    </p>
+                    <Button onClick={() => navigate('/browse')}>
+                      Browse Films
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Film className="h-12 w-12 mx-auto mb-4 text-primary" />
+                    <p className="text-xl font-semibold mb-2">You own {nftBalance} film{nftBalance !== 1 ? 's' : ''}!</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Film collection display coming soon
+                    </p>
+                    <Button onClick={() => refetchNFTs()} variant="outline">
+                      Refresh Collection
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

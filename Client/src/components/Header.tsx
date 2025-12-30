@@ -2,6 +2,7 @@ import { Film, User as UserIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { NavLink } from "./NavLink";
 import { WalletButton } from "./WalletButton";
+import { WalletStatus } from "./WalletStatus";
 import logo from "@/assets/quiflix-logo.png";
 
 export const Header = () => {
@@ -13,6 +14,7 @@ export const Header = () => {
         </div>
 
         <div className="flex items-center gap-4">
+          <WalletStatus variant="compact" showCopyButton={false} showChainInfo={false} />
           <WalletButton />
           <NavLink to="/profile">
             <Button variant="ghost" size="icon" className="rounded-full">
