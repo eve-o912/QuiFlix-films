@@ -7,9 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Film, DollarSign, TrendingUp, Eye, Loader2, Plus } from "lucide-react";
 import { useMyFilms, useMyPurchases, useMyInvestments, useMyEarnings } from "@/hooks/useFilms";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const MyFilms = () => {
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { data: myFilms, isLoading: loadingFilms } = useMyFilms();
   const { data: myPurchases, isLoading: loadingPurchases } = useMyPurchases();
   const { data: myInvestments, isLoading: loadingInvestments } = useMyInvestments();
@@ -29,25 +31,24 @@ const MyFilms = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <Header />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
       
-      <main className="ml-16 pt-16">
-        <div className="px-8 py-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold text-foreground">My Films</h1>
-                <p className="text-muted-foreground">Manage your films, investments, and earnings</p>
-              </div>
-              <Button onClick={() => navigate('/submit')} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Submit New Film
-              </Button>
+      <main className="md:ml-16 pt-16 p-4 md:p-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground">My Films</h1>
+              <p className="text-sm md:text-base text-muted-foreground">Manage your films, investments, and earnings</p>
             </div>
+            <Button onClick={() => navigate('/submit')} className="gap-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4" />
+              Submit New Film
+            </Button>
+          </div>
 
-            {/* Stats Overview */}
-            <div className="mb-8 grid gap-4 md:grid-cols-4">
+          {/* Stats Overview */}
+          <div className="mb-6 md:mb-8 grid gap-4 grid-cols-2 md:grid-cols-4">
               <Card className="border-border bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">

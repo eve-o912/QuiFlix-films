@@ -19,6 +19,7 @@ const Submit = () => {
   const [isLoadingWallet, setIsLoadingWallet] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     director: "",
@@ -123,10 +124,10 @@ const Submit = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <Header />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
       
-      <main className="ml-16 pt-16">
+      <main className="md:ml-16 pt-16 p-4 md:p-8">
         <div className="px-8 py-8">
           <div className="mx-auto max-w-5xl">
             <div className="mb-8">

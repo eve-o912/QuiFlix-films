@@ -21,6 +21,7 @@ const Profile = () => {
   const [wallet, setWallet] = useState(null);
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Use custom hooks for wallet info and NFT balance
   const walletInfo = useWalletInfo();
@@ -136,66 +137,63 @@ const Profile = () => {
   if (loading || !userId) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-6 ml-64">
-            <div className="max-w-4xl mx-auto space-y-6">
-              <Skeleton className="h-12 w-48" />
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-64 w-full" />
-            </div>
-          </main>
-        </div>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <main className="md:ml-16 pt-16 p-4 md:p-6">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <Skeleton className="h-12 w-48" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-6 ml-64">
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Back Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mb-4"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
+      <main className="md:ml-16 pt-16 p-4 md:p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mb-4"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
 
-            {/* Profile Header */}
-            <div className="flex items-start gap-6">
-              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">     
-                <User className="h-12 w-12 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-2">
-                  {profile?.full_name || 'QuiFlix User'}
-                </h1>
-                <p className="text-muted-foreground mb-4">{profile?.email}</p>
-                <p className="text-sm text-muted-foreground">
-                  Manage your QuiFlix account and view your digital film collection
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <WalletStatus variant="default" showCopyButton={false} showChainInfo={false} />
-              </div>
+          {/* Profile Header */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-6">
+            <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-primary/10 flex items-center justify-center">     
+              <User className="h-10 w-10 md:h-12 md:w-12 text-primary" />
             </div>
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                {profile?.full_name || 'QuiFlix User'}
+              </h1>
+              <p className="text-muted-foreground mb-2 md:mb-4 text-sm md:text-base">{profile?.email}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                Manage your QuiFlix account and view your digital film collection
+              </p>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <WalletStatus variant="default" showCopyButton={false} showChainInfo={false} />
+            </div>
+          </div>
 
-            {/* Wallet Details */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-primary" />
-                  Wallet Details
-                </h2>
-                {walletInfo.isConnected ? (
+          {/* Wallet Details */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Wallet Details
+              </h2>
+              {walletInfo.isConnected ? (
                   <div className="space-y-4">
                     <WalletStatus 
                       variant="detailed" 
@@ -240,11 +238,11 @@ const Profile = () => {
                     </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </CardContent>
+          </Card>
 
             {/* Stats and Collection */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-6 text-center">
                   <Film className="h-8 w-8 mx-auto mb-2 text-primary" />
@@ -353,7 +351,7 @@ const Profile = () => {
           </div>
         </main>
       </div>
-    </div>
+    
   );
 };
 

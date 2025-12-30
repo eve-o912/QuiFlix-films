@@ -1,3 +1,4 @@
+import React from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { FilmCard } from "@/components/FilmCard";
@@ -83,6 +84,7 @@ const sampleFilms = [
 
 const Browse = () => {
   const { data: dbFilms, isLoading } = useFilms();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   
   // Use database films if available, otherwise show samples
   const films = dbFilms && dbFilms.length > 0 ? dbFilms : sampleFilms;
@@ -90,12 +92,12 @@ const Browse = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <Header />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
       
-      <main className="ml-16 pt-16">
+      <main className="md:ml-16 pt-16">
         {/* Featured Hero Banner */}
-        <div className="relative h-[50vh] overflow-hidden">
+        <div className="relative h-[40vh] md:h-[50vh] overflow-hidden">
           <img
             src={featuredFilm.poster_url || "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&h=450&fit=crop"}
             alt={featuredFilm.title}
@@ -104,28 +106,28 @@ const Browse = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" />
           
-          <div className="absolute bottom-0 left-0 right-0 p-8">
+          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8">
             <div className="mx-auto max-w-7xl">
-              <span className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/20 px-3 py-1 text-sm font-medium text-primary backdrop-blur-sm">
-                <Star className="h-4 w-4 fill-primary" />
+              <span className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/20 px-3 py-1 text-xs md:text-sm font-medium text-primary backdrop-blur-sm">
+                <Star className="h-3 w-3 md:h-4 md:w-4 fill-primary" />
                 Featured Film
               </span>
-              <h1 className="mb-2 text-5xl font-bold text-foreground">{featuredFilm.title}</h1>
-              <p className="mb-4 flex items-center gap-4 text-muted-foreground">
+              <h1 className="mb-2 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">{featuredFilm.title}</h1>
+              <p className="mb-4 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-base text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-primary text-primary" />
+                  <Star className="h-3 w-3 md:h-4 md:w-4 fill-primary text-primary" />
                   {featuredFilm.rating}
                 </span>
-                <span>•</span>
-                <span>{featuredFilm.views.toLocaleString()} views</span>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="hidden sm:inline">{featuredFilm.views.toLocaleString()} views</span>
+                <span className="hidden sm:inline">•</span>
                 <span className="text-primary font-semibold">From ${featuredFilm.direct_price} USDC</span>
                 {featuredFilm.available_shares > 0 && (
                   <>
-                    <span>•</span>
-                    <span className="flex items-center gap-1 text-primary">
+                    <span className="hidden md:inline">•</span>
+                    <span className="hidden md:flex items-center gap-1 text-primary">
                       <TrendingUp className="h-4 w-4" />
-                      {featuredFilm.available_shares} shares available
+                      {featuredFilm.available_shares} shares
                     </span>
                   </>
                 )}
@@ -135,38 +137,38 @@ const Browse = () => {
         </div>
 
         {/* Quick Categories */}
-        <div className="border-b border-border bg-card/30 px-8 py-4">
-          <div className="mx-auto flex max-w-7xl items-center gap-6">
-            <button className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90">
-              <TrendingUp className="h-4 w-4" />
+        <div className="border-b border-border bg-card/30 px-4 md:px-8 py-3 md:py-4 overflow-x-auto">
+          <div className="mx-auto flex max-w-7xl items-center gap-3 md:gap-6 min-w-max md:min-w-0">
+            <button className="flex items-center gap-2 rounded-full bg-primary px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 whitespace-nowrap">
+              <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
               Trending
             </button>
-            <button className="flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80">
-              <Clock className="h-4 w-4" />
+            <button className="flex items-center gap-2 rounded-full bg-secondary px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80 whitespace-nowrap">
+              <Clock className="h-3 w-3 md:h-4 md:w-4" />
               New Releases
             </button>
-            <button className="flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80">
-              <Star className="h-4 w-4" />
+            <button className="flex items-center gap-2 rounded-full bg-secondary px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80 whitespace-nowrap">
+              <Star className="h-3 w-3 md:h-4 md:w-4" />
               Top Rated
             </button>
-            <button className="flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80">
-              <Play className="h-4 w-4" />
+            <button className="flex items-center gap-2 rounded-full bg-secondary px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80 whitespace-nowrap">
+              <Play className="h-3 w-3 md:h-4 md:w-4" />
               NFT Exclusives
             </button>
           </div>
         </div>
 
         {/* Films Grid */}
-        <div className="px-6 py-6">
+        <div className="px-4 md:px-6 py-4 md:py-6">
           <div className="mx-auto max-w-7xl">
-            <h2 className="mb-4 text-lg font-medium text-muted-foreground/80">All Films</h2>
+            <h2 className="mb-3 md:mb-4 text-base md:text-lg font-medium text-muted-foreground/80">All Films</h2>
             
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-diamond" />
               </div>
             ) : (
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              <div className="grid gap-3 md:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {films.map((film) => (
                   <FilmCard
                     key={film.id}
@@ -188,10 +190,10 @@ const Browse = () => {
         </div>
 
         {/* Stats Section */}
-        <section className="border-t border-diamond/10 bg-gradient-to-r from-card/30 via-card/50 to-card/30 px-6 py-8">
-          <div className="mx-auto grid max-w-7xl gap-6 grid-cols-2 md:grid-cols-4">
+        <section className="border-t border-diamond/10 bg-gradient-to-r from-card/30 via-card/50 to-card/30 px-4 md:px-6 py-6 md:py-8">
+          <div className="mx-auto grid max-w-7xl gap-4 md:gap-6 grid-cols-2 md:grid-cols-4">
             <div className="text-center">
-              <div className="mb-1 text-2xl font-medium text-diamond/80">{films.length}+</div>
+              <div className="mb-1 text-xl md:text-2xl font-medium text-diamond/80">{films.length}+</div>
               <div className="text-xs text-muted-foreground/60">Films</div>
             </div>
             <div className="text-center">

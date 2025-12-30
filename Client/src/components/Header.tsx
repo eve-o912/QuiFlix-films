@@ -1,20 +1,37 @@
-import { Film, User as UserIcon } from "lucide-react";
+import { Film, User as UserIcon, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { NavLink } from "./NavLink";
 import { WalletButton } from "./WalletButton";
 import { WalletStatus } from "./WalletStatus";
 import logo from "@/assets/quiflix-logo.png";
+import { useState } from "react";
 
-export const Header = () => {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export const Header = ({ onMenuClick }: HeaderProps) => {
   return (
-    <header className="fixed left-16 right-0 top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-8">
+    <header className="fixed left-0 md:left-16 right-0 top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center justify-between px-4 md:px-8">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="QuiFlix" className="h-8" />
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={onMenuClick}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <img src={logo} alt="QuiFlix" className="h-6 md:h-8" />
         </div>
 
-        <div className="flex items-center gap-4">
-          <WalletStatus variant="compact" showCopyButton={false} showChainInfo={false} />
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Hide WalletStatus on very small screens */}
+          <div className="hidden sm:block">
+
+          </div>
           <WalletButton />
           <NavLink to="/profile">
             <Button variant="ghost" size="icon" className="rounded-full">
