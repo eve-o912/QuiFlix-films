@@ -299,7 +299,7 @@ const Submit = () => {
               </Card>
 
               {/* Investment Options */}
-              <Card className="border-border bg-card border-primary/30">
+              <Card className="bg-card border-primary/30">
                 <CardContent className="p-6">
                   <div className="mb-4 flex items-center gap-2">
                     <div className="rounded bg-primary/20 p-2">
